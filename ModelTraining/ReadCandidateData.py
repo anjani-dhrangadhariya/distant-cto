@@ -188,10 +188,10 @@ def FetchTrainingCandidates():
     parser = argparse.ArgumentParser()
     parser.add_argument('-embed', type = str, default = 'scibert') # word2vec, bio2vec2, bio2vec30, bert, gpt2, biobert, scibert
     parser.add_argument('-embed_type', type = str, default = 'contextual') # semantic, contextual
-    parser.add_argument('-model', type = str, default = 'scibertposattenlinear') # bertcrf, scibertcrf, scibertposcrf, scibertposattenlinear, scibertposattencrf
+    parser.add_argument('-model', type = str, default = 'scibertposattenlinear') # bertcrf, scibertcrf, scibertposcrf, scibertposlinear, scibertposattenlinear, scibertposattencrf
     parser.add_argument('-label_type', type = str, default = 'seq_lab') # seq_lab, BIO, BIOES
     parser.add_argument('-text_level', type = str, default = 'sentence') # sentence, document
-    args = parser.parse_args()    
+    args = parser.parse_args()
 
     print('Chosen embedding type is: ', args.embed)
 

@@ -51,6 +51,7 @@ from Models.BERT_CRF import BERTCRF
 from Models.SCIBERT_CRF import SCIBERTCRF
 from Models.SCIBERTPOS_CRF import SCIBERTPOSCRF
 from Models.SCIBERT_Linear import SCIBERTLinear
+from Models.SCIBERTPOS_Linear import SCIBERTPOSLinear
 from Models.SCIBERTPOSATTEN_CRF import SCIBERTPOSAttenCRF
 from Models.SCIBERTPOSATTEN_Linear import SCIBERTPOSAttenLinear
 
@@ -83,6 +84,8 @@ def choose_model(vector_type, pretrained_model, args):
         model = SCIBERTCRF(args.freeze_bert, tokenizer, args.gpu, args.bidrec)
     elif pretrained_model == 'scibertposcrf':
         model = SCIBERTPOSCRF(args.freeze_bert, tokenizer, args.gpu, args.bidrec)
+    elif pretrained_model == 'scibertposlinear':
+        model = SCIBERTPOSLinear(args.freeze_bert, tokenizer, args.gpu, args.bidrec)
     elif pretrained_model == 'scibertlinear':
         model = SCIBERTLinear(args.freeze_bert, tokenizer, args.gpu, args.bidrec)
     elif pretrained_model == 'scibertposattencrf':
