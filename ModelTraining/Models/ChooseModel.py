@@ -54,6 +54,7 @@ from Models.SCIBERT_Linear import SCIBERTLinear
 from Models.SCIBERTPOS_Linear import SCIBERTPOSLinear
 from Models.SCIBERTPOSATTEN_CRF import SCIBERTPOSAttenCRF
 from Models.SCIBERTPOSATTEN_Linear import SCIBERTPOSAttenLinear
+from Models.SCIBERTPOSATTEN_activation import SCIBERTPOSAttenActLin
 
 def choose_tokenizer_type(pretrained_model):
     ##################################################################################
@@ -92,6 +93,8 @@ def choose_model(vector_type, pretrained_model, args):
         model = SCIBERTPOSAttenCRF(args.freeze_bert, tokenizer, args.gpu, args.bidrec)
     elif pretrained_model == 'scibertposattenlinear':
         model = SCIBERTPOSAttenLinear(args.freeze_bert, tokenizer, args.gpu, args.bidrec)
+    elif pretrained_model == 'scibertposattenact':
+        model = SCIBERTPOSAttenActLin(args.freeze_bert, tokenizer, args.gpu, args.bidrec)
     else:
         print('Please enter correct model name...')
 
