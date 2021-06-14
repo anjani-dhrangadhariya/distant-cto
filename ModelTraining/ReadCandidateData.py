@@ -165,8 +165,8 @@ def readRawCandidates( list_NCT, extraction_number, label_type=None ):
                         nct_ids.append(id_)
 
             counter_stop = counter_stop + 1
-            if counter_stop == 50:
-                break
+            # if counter_stop == 50:
+            #     break
 
     # Collate the lists into a dataframe
     # corpusDf = percentile_list = pd.DataFrame({'tokens': tokens,'labels': labels,'ids': nct_ids})
@@ -188,9 +188,10 @@ def FetchTrainingCandidates():
     parser = argparse.ArgumentParser()
     parser.add_argument('-embed', type = str, default = 'scibert') # word2vec, bio2vec2, bio2vec30, bert, gpt2, biobert, scibert
     parser.add_argument('-embed_type', type = str, default = 'contextual') # semantic, contextual
-    parser.add_argument('-model', type = str, default = 'scibertposattenlinear') # bertcrf, scibertcrf, scibertposcrf, scibertposlinear, scibertposattenlinear, scibertposattencrf
+    parser.add_argument('-model', type = str, default = 'scibertposattenact') # bertcrf, scibertcrf, scibertposcrf, scibertposlinear, scibertposattenlinear, scibertposattencrf, scibertposattenact
     parser.add_argument('-label_type', type = str, default = 'seq_lab') # seq_lab, BIO, BIOES
     parser.add_argument('-text_level', type = str, default = 'sentence') # sentence, document
+    parser.add_argument('-train_data', type = str, default = 'distant-cto') # distant-cto, combined
     args = parser.parse_args()
 
     print('Chosen embedding type is: ', args.embed)
@@ -235,16 +236,18 @@ def FetchTrainingCandidates():
 
         elif args.text_level == 'sentence':
 
+            # allSentence_annot/
+
             print('Length of annotation corpus: ', len(annotations_df))
 
-            EBM_NLP_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/sentence_annotation2POS.txt'
+            EBM_NLP_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/allSentence_annot/sentence_annotation2POS.txt'
             testDf = readEBMNLP_sentAnnot(EBM_NLP_sentences, args.label_type)
 
-            EBM_NLPgold_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/ebmnlpgold_sentence_annotation2POS.txt'
+            EBM_NLPgold_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/allSentence_annot/ebmnlpgold_sentence_annotation2POS.txt'
             test1Df = readEBMNLP_sentAnnot(EBM_NLPgold_sentences, args.label_type)
             print('Loading EBM-NLP training and test sentences completed...')
 
-            hilfiker_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/hilfiker_sentence_annotation2POS.txt'
+            hilfiker_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/allSentence_annot/hilfiker_sentence_annotation2POS.txt'
             test2Df = readEBMNLP_sentAnnot(hilfiker_sentences, args.label_type)
             print('Loading in-house physiotherapy test sentences completed...')
 

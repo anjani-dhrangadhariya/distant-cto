@@ -90,6 +90,18 @@ def sigmoid(x, k=0.1):
     s = 1 / (1 + np.exp(-x / k)) 
     return s
 
+# apply threshold to positive probabilities to create labels
+def to_labels(pos_probs, threshold):
+	return (pos_probs >= threshold).astype('int')
+
+# get logits
+
+def getLogits(all_preds_tens):
+    # get logits from predictions
+    max_probs = torch.max(all_preds_tens, dim=1) # get the highest of two probablities
+    all_logits_tens = max_probs.indices.flatten()
+    return all_logits_tens
+
 # Evaluate
 def evaluate(defModel, optimizer, scheduler, development_dataloader, args, exp_args, epoch_number = None):
     mean_acc = 0
@@ -124,51 +136,47 @@ def evaluate(defModel, optimizer, scheduler, development_dataloader, args, exp_a
             e_input_pos = e_input_pos.cuda()
 
             e_loss, e_output, e_labels, e_mask = defModel(e_input_ids, attention_mask=e_input_mask, labels=e_labels, input_pos=e_input_pos)
-
+            # e_output is raw probablities
 
             mean_loss += e_loss.item()
 
             for i in range(0, e_labels.shape[0]):
-                # select_rawprobas = torch.masked_select( e_output[i, ].cuda(), mask_expanded )
-                # selected_labs = torch.masked_select(e_labels[i, ].cuda(), e_mask[i, ])
-
-                max_probs = torch.max(e_output, dim=2)
 
                 raw_probablities.extend(  e_output[i, ] )
-                all_predictions.extend( max_probs.values[i, ] )
-                all_GT.extend( e_labels[i, ] )
                 all_masks.extend( e_mask[i, ] )
+                all_GT.extend( e_labels[i, ] )
+                all_predictions.extend( e_output[i, ] )
+
             count += 1
 
         avg_val_loss = mean_loss / len(development_dataloader)     
         # writer.add_scalar('loss-validation', avg_val_loss, epoch_number) # XXX Return the avg_val_loss from this method to the train method and write to the writer from there
 
-        # Mask raw probablities and labels
-        raw_probas_arr =  torch.stack(( raw_probablities ))
-        mask_arr =  torch.stack(( all_masks ))
-        mask_expanded = mask_arr.unsqueeze(-1).expand( raw_probas_arr.size() )
-        print( mask_expanded )
-        masked_output = raw_probas_arr * mask_expanded.int().float()
-        print( masked_output )
-        all_GT_arr =  torch.stack(( all_GT ))
-        selected_labs = torch.masked_select(all_GT_arr, mask_arr)
+        # stack the list of tensors into a tensor
+        all_GT_tens =  torch.stack(( all_GT ))
+        all_masks_tens = torch.stack(( all_masks ))
+        all_preds_tens = torch.stack(( all_predictions ))
 
-        # Normalize the raw probablities
-        normalized_probas = norm( masked_output )
-        sigrawprobas_output = sigmoid( normalized_probas.cpu() )
-        print( sigrawprobas_output )
+        # get logits from predictions
+        if isinstance(list( all_preds_tens.shape ), list):
+            max_probs = torch.max(all_preds_tens, dim=1) # get the highest of two probablities
+            all_logits_tens = max_probs.indices.flatten()
+        else: 
+            all_logits_tens = all_preds_tens
 
-        all_GT_flat = np.asarray(selected_labs, dtype=np.float32).flatten()
-        all_rawprobas_flat = np.asarray(sigrawprobas_output , dtype=np.float32).flatten() 
+        # mask the tensors
+        selected_preds_coarse = torch.masked_select( all_logits_tens.cuda(), all_masks_tens )
+        selected_labs_coarse = torch.masked_select( all_GT_tens.cuda(), all_masks_tens )
 
-        # Get the best threshold
-        getRoc(all_GT_flat, all_rawprobas_flat)
+        # flatten
+        all_pred_flat = np.asarray(selected_preds_coarse.cpu(), dtype=np.float32).flatten()
+        all_GT_flat = np.asarray(selected_labs_coarse.cpu(), dtype=np.float32).flatten()
 
         # Final classification report and confusion matrix for each epoch
         ### If working on a sentence selector, then only include predictions 
-        val_cr = classification_report(y_pred=all_pred_flat, y_true=all_GT_flat, labels=list(range(2)), output_dict=True)     
+        val_cr = classification_report(y_pred= all_pred_flat, y_true=all_GT_flat, labels=list(range(2)), output_dict=True)     
 
-        # confusion_matrix and plot
+        # # confusion_matrix and plot
         labels = [1,0]
         cm = confusion_matrix(all_GT_flat, all_pred_flat, labels)
 
@@ -187,7 +195,11 @@ def train(defModel, optimizer, scheduler, train_dataloader, development_dataload
 
             # (coarse-grained) accumulate predictions and labels over the epoch
             train_epoch_logits_coarse = []
+            train_epoch_masks_coarse = []
             train_epochs_labels_coarse = []
+
+            train_epoch_logits_coarse_i = []
+            train_epochs_labels_coarse_i = []
 
             # Training for all the batches in this epoch
             for step, batch in enumerate(train_dataloader):
@@ -215,17 +227,21 @@ def train(defModel, optimizer, scheduler, train_dataloader, development_dataload
                 # Update the learning rate.
                 scheduler.step()
 
-                for i in range(0, b_labels.shape[0]): 
+                for i in range(0, b_labels.shape[0]):
 
-                    selected_preds_coarse = torch.masked_select(b_output[i, ].cuda(), b_mask[i, ])
+                    train_epoch_masks_coarse.extend( b_mask[i, ] )
+                    train_epochs_labels_coarse.extend( b_labels[i, ] )
+                    train_epoch_logits_coarse.extend( b_output[i, ] )
+
+                    selected_preds_coarse = torch.masked_select( getLogits( b_output[i, ] ).cuda(), b_mask[i, ])
                     selected_labs_coarse = torch.masked_select(b_labels[i, ].cuda(), b_mask[i, ])
 
-                    train_epoch_logits_coarse.extend( selected_preds_coarse.to("cpu").numpy() )
-                    train_epochs_labels_coarse.extend( selected_labs_coarse.to("cpu").numpy() )
+                    train_epoch_logits_coarse_i.extend( selected_preds_coarse.to("cpu").numpy() )
+                    train_epochs_labels_coarse_i.extend( selected_labs_coarse.to("cpu").numpy() )
 
                 if step % args.print_every == 0:
 
-                    cr = classification_report(y_pred=train_epoch_logits_coarse, y_true=train_epochs_labels_coarse, labels= list(range(2)), output_dict=True)
+                    cr = classification_report(y_pred=train_epoch_logits_coarse_i, y_true=train_epochs_labels_coarse_i, labels= list(range(2)), output_dict=True)
                     # meanF1_2 = cr['2']['f1-score']
                     meanF1_1 = cr['1']['f1-score']
                     meanF1_0 = cr['0']['f1-score']
@@ -234,13 +250,31 @@ def train(defModel, optimizer, scheduler, train_dataloader, development_dataload
 
             # Calculate the average loss over all of the batches.
             avg_train_loss = total_train_loss / len(train_dataloader)
-            writer.add_scalar('loss-train', avg_train_loss, epoch_i)
-            train_cr = classification_report(y_pred= train_epoch_logits_coarse, y_true=train_epochs_labels_coarse, labels= list(range(2)), output_dict=True) 
+            # writer.add_scalar('loss-train', avg_train_loss, epoch_i)
+
+            # stack the list of tensors into a tensor
+            all_masks_tens = torch.stack(( train_epoch_masks_coarse ))
+            all_GT_tens =  torch.stack(( train_epochs_labels_coarse ))
+            all_preds_tens = torch.stack(( train_epoch_logits_coarse ))
+
+            # get logits from predictions
+            max_probs = torch.max(all_preds_tens, dim=1) # get the highest of two probablities
+            all_logits_tens = max_probs.indices.flatten()
+
+            # mask the tensors
+            selected_preds_coarse = torch.masked_select( all_logits_tens.cuda(), all_masks_tens )
+            selected_labs_coarse = torch.masked_select( all_GT_tens.cuda(), all_masks_tens )
+
+            # flatten
+            all_pred_flat = np.asarray(selected_preds_coarse.cpu(), dtype=np.float32).flatten()
+            all_GT_flat = np.asarray(selected_labs_coarse.cpu(), dtype=np.float32).flatten()
+
+            train_cr = classification_report(y_pred= all_pred_flat, y_true=all_GT_flat, labels= list(range(2)), output_dict=True) 
             # meanF1_2 = train_cr['2']['f1-score']
             meanF1_1 = train_cr['1']['f1-score']
             meanF1_0 = train_cr['0']['f1-score']
             mean_1 = (meanF1_1 + meanF1_0) / 2
-            writer.add_scalar('f1-train', meanF1_1  , epoch_i)
+            # writer.add_scalar('f1-train', meanF1_1  , epoch_i)
 
             # Validation 
             val_cr, all_pred_flat_coarse, all_GT_flat_coarse, cm = evaluate(defModel, optimizer, scheduler, development_dataloader, args, exp_args, epoch_i)
@@ -250,12 +284,11 @@ def train(defModel, optimizer, scheduler, train_dataloader, development_dataload
             val_mean_1 = (val_meanF1_1 + val_meanF1_0) / 2
             # print('Validation F1 for class intervention ', val_meanF1)
             print('Validation: Epoch {} with mean F1 score (1): {}, mean F1 score (0): {} and traing loss : {}'.format(epoch_i, val_meanF1_1, val_meanF1_0, avg_train_loss))
-            writer.add_scalar('f1-validation', val_meanF1_1 , epoch_i)
+            # writer.add_scalar('f1-validation', val_meanF1_1 , epoch_i)
 
             if val_meanF1_1 > best_meanf1:
                 print("Best validation mean F1 improved from {} to {} ...".format( best_meanf1, val_meanF1_1 ))
-                model_name_here = '/mnt/nas2/results/Results/systematicReview/Distant_CTO/models/intervention/noEBMTrain_w_shortAnnot_SCIPOSAtten_crf/' + 'bert_bilstm_crf_epoch_' + str(epoch_i) + '_best_model.pth'
-                # model_name_here = ''
+                model_name_here = '/mnt/nas2/results/Results/systematicReview/Distant_CTO/models/intervention/noEBM_w_shortAnn_IO_POSciAtten_ActLin/' + 'bert_bilstm_crf_epoch_' + str(epoch_i) + '_best_model.pth'
                 print('Saving the best model for epoch {} with mean F1 score of {} '.format(epoch_i, val_meanF1_1 )) 
                 torch.save(defModel.state_dict(), model_name_here)
                 saved_models.append(model_name_here)                     
@@ -274,8 +307,11 @@ if __name__ == "__main__":
     annotations, annotations_testdf_, annotations_test1df_, annotations_test2df_, exp_args = FetchTrainingCandidates()
 
     # Combine the training (annotations) and development (annotations_testdf_) dataframes, shuffle them and divide into training and validation sets
-    #fulldf = annotations.append(annotations_testdf_, ignore_index=True)
-    fulldf = annotations
+    if exp_args == 'combined':
+        fulldf = annotations.append(annotations_testdf_, ignore_index=True)
+    elif exp_args == 'distant-cto': 
+        fulldf = annotations
+
     fulldf = fulldf.sample(frac=1).reset_index(drop=True)
     annotations, annotations_testdf_ = train_test_split(fulldf, test_size=0.2) 
     print('Size of training set: ', len(annotations.index))
@@ -373,7 +409,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # PATH_SUM_WRITER = '/home/anjani/DistantCTO/ModelTraining/logs/' + str(fold)
-    PATH_SUM_WRITER = '/home/anjani/DistantCTO/ModelTraining/logs/' + str('noEBMTrain_w_shortAnnot_SCIPOSAtten_crf')
+    PATH_SUM_WRITER = '/home/anjani/DistantCTO/ModelTraining/logs/' + str('noEBM_w_shortAnn_IO_POSciAtten_ActLin')
     writer = SummaryWriter(PATH_SUM_WRITER) # XXX
 
     ##################################################################################
@@ -415,15 +451,15 @@ if __name__ == "__main__":
     print('##################################################################################')
     print('Begin training...')
     print('##################################################################################')
-    # train(model, optimizer, scheduler, train_dataloader, test_dataloader, args, exp_args)
+    train(model, optimizer, scheduler, train_dataloader, test_dataloader, args, exp_args)
     # train(model, optimizer, scheduler, train_dataloader, development_dataloader, args, exp_args)
     print("Training and validation done in {} seconds".format(time.time() - st))
 
     print('##################################################################################')
     print('Begin test...')
     print('##################################################################################')
-    # checkpoint = torch.load(saved_models[-1], map_location='cuda:0')
-    checkpoint = torch.load('/mnt/nas2/results/Results/systematicReview/Distant_CTO/models/intervention/combined_w_shortAnn_IO_POSciAtten_linear/bert_bilstm_crf_epoch_9_best_model.pth', map_location='cuda:0')
+    checkpoint = torch.load(saved_models[-1], map_location='cuda:0')
+    # checkpoint = torch.load('/mnt/nas2/results/Results/systematicReview/Distant_CTO/models/intervention/combined_w_shortAnn_IO_POSciAtten_linear/bert_bilstm_crf_epoch_9_best_model.pth', map_location='cuda:0')
     model.load_state_dict( checkpoint )
 
     # # print('Applying the best model on test set (EBM-NLP training set used as test set)...')
