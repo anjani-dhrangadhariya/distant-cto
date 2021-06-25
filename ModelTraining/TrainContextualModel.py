@@ -21,6 +21,9 @@ import logging
 import datetime as dt
 import time
 
+# statistics
+import statistics
+
 # sklearn
 from sklearn import preprocessing
 from sklearn.metrics import precision_score, recall_score, f1_score, classification_report, accuracy_score, confusion_matrix
@@ -63,8 +66,8 @@ from Functions.ThresholdMoving import getRoc
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 n_gpu = torch.cuda.device_count()
 print('Number of GPUs identified: ', n_gpu)
-print(torch.cuda.get_device_name(0))
 print('You are using ', torch.cuda.get_device_name(0), ' : ', device , ' device')
+print('You are using ', torch.cuda.get_device_name(1), ' : ', device , ' device')
 
 ##################################################################################
 # set all the seed values
@@ -119,7 +122,7 @@ def evaluate(defModel, optimizer, scheduler, development_dataloader, args, exp_a
 
         for e_input_ids_, e_labels, e_input_mask, e_input_pos in development_dataloader:
 
-            e_input_ids_ = e_input_ids_.cuda()
+            e_input_ids_ = e_input_ids_.to(f'cuda:0')
 
             with torch.cuda.device_of(e_input_ids_.data):
                 e_input_ids = e_input_ids_.clone()
@@ -131,14 +134,15 @@ def evaluate(defModel, optimizer, scheduler, development_dataloader, args, exp_a
                 e_input_ids[e_input_ids_==102] = tokenizer.eos_token_id
 
             # coarse grained entity labels
-            e_input_mask = e_input_mask.cuda()
-            e_labels = e_labels.cuda()
-            e_input_pos = e_input_pos.cuda()
+            e_input_mask = e_input_mask.to(f'cuda:0')
+            e_labels = e_labels.to(f'cuda:0')
+            e_input_pos = e_input_pos.to(f'cuda:0')
 
             e_loss, e_output, e_labels, e_mask = defModel(e_input_ids, attention_mask=e_input_mask, labels=e_labels, input_pos=e_input_pos)
             # e_output is raw probablities
 
-            mean_loss += e_loss.item()
+            # mean_loss += e_loss.item()
+            mean_loss += abs( torch.mean(e_loss) ) 
 
             for i in range(0, e_labels.shape[0]):
 
@@ -158,15 +162,16 @@ def evaluate(defModel, optimizer, scheduler, development_dataloader, args, exp_a
         all_preds_tens = torch.stack(( all_predictions ))
 
         # get logits from predictions
-        if isinstance(list( all_preds_tens.shape ), list):
+        # if isinstance(list( all_preds_tens.shape ), list):
+        if len(list( all_preds_tens.shape )) > 1:
             max_probs = torch.max(all_preds_tens, dim=1) # get the highest of two probablities
             all_logits_tens = max_probs.indices.flatten()
         else: 
             all_logits_tens = all_preds_tens
 
         # mask the tensors
-        selected_preds_coarse = torch.masked_select( all_logits_tens.cuda(), all_masks_tens )
-        selected_labs_coarse = torch.masked_select( all_GT_tens.cuda(), all_masks_tens )
+        selected_preds_coarse = torch.masked_select( all_logits_tens.to(f'cuda:0'), all_masks_tens )
+        selected_labs_coarse = torch.masked_select( all_GT_tens.to(f'cuda:0'), all_masks_tens )
 
         # flatten
         all_pred_flat = np.asarray(selected_preds_coarse.cpu(), dtype=np.float32).flatten()
@@ -207,16 +212,18 @@ def train(defModel, optimizer, scheduler, train_dataloader, development_dataload
                 # Clear the gradients
                 optimizer.zero_grad()
 
-                b_input_ids = batch[0].cuda()
-                b_labels = batch[1].cuda()
-                b_masks = batch[2].cuda()
-                b_pos = batch[3].cuda()
+                b_input_ids = batch[0].to(f'cuda:{model.device_ids[0]}')
+                b_labels = batch[1].to(f'cuda:{model.device_ids[0]}')
+                b_masks = batch[2].to(f'cuda:{model.device_ids[0]}')
+                b_pos = batch[3].to(f'cuda:{model.device_ids[0]}')
 
                 b_loss, b_output, b_labels, b_mask = defModel(input_ids = b_input_ids, attention_mask=b_masks, labels=b_labels, input_pos=b_pos)
+                
+                # total_train_loss += abs( b_loss.item() )
+                total_train_loss += abs( torch.mean(b_loss) ) 
 
-                total_train_loss += abs( b_loss.item() )
-
-                abs(b_loss).backward()
+                # abs( torch.FloatTensor( [statistics.mean(b_loss.tolist())] ) ).backward()
+                abs( torch.mean(b_loss) ).backward()
 
                 # Clip the norm of the gradients to 1.0. This is to help prevent the "exploding gradients" problem.
                 torch.nn.utils.clip_grad_norm_(defModel.parameters(), 1.0)
@@ -233,8 +240,8 @@ def train(defModel, optimizer, scheduler, train_dataloader, development_dataload
                     train_epochs_labels_coarse.extend( b_labels[i, ] )
                     train_epoch_logits_coarse.extend( b_output[i, ] )
 
-                    selected_preds_coarse = torch.masked_select( getLogits( b_output[i, ] ).cuda(), b_mask[i, ])
-                    selected_labs_coarse = torch.masked_select(b_labels[i, ].cuda(), b_mask[i, ])
+                    selected_preds_coarse = torch.masked_select( getLogits( b_output[i, ] ).to(f'cuda:{model.device_ids[0]}'), b_mask[i, ])
+                    selected_labs_coarse = torch.masked_select(b_labels[i, ].to(f'cuda:{model.device_ids[0]}'), b_mask[i, ])
 
                     train_epoch_logits_coarse_i.extend( selected_preds_coarse.to("cpu").numpy() )
                     train_epochs_labels_coarse_i.extend( selected_labs_coarse.to("cpu").numpy() )
@@ -262,8 +269,8 @@ def train(defModel, optimizer, scheduler, train_dataloader, development_dataload
             all_logits_tens = max_probs.indices.flatten()
 
             # mask the tensors
-            selected_preds_coarse = torch.masked_select( all_logits_tens.cuda(), all_masks_tens )
-            selected_labs_coarse = torch.masked_select( all_GT_tens.cuda(), all_masks_tens )
+            selected_preds_coarse = torch.masked_select( all_logits_tens.to(f'cuda:{model.device_ids[0]}'), all_masks_tens )
+            selected_labs_coarse = torch.masked_select( all_GT_tens.to(f'cuda:{model.device_ids[0]}'), all_masks_tens )
 
             # flatten
             all_pred_flat = np.asarray(selected_preds_coarse.cpu(), dtype=np.float32).flatten()
@@ -288,7 +295,7 @@ def train(defModel, optimizer, scheduler, train_dataloader, development_dataload
 
             if val_meanF1_1 > best_meanf1:
                 print("Best validation mean F1 improved from {} to {} ...".format( best_meanf1, val_meanF1_1 ))
-                model_name_here = '/mnt/nas2/results/Results/systematicReview/Distant_CTO/models/intervention/noEBM_w_shortAnn_IO_POSciAtten_ActLin/' + 'bert_bilstm_crf_epoch_' + str(epoch_i) + '_best_model.pth'
+                model_name_here = '/mnt/nas2/results/Results/systematicReview/Distant_CTO/models/intervention/noEBMTrain_w_shortAnnot_SCIPOSAtten_linear/' + 'bert_bilstm_crf_epoch_' + str(epoch_i) + '_best_model.pth'
                 print('Saving the best model for epoch {} with mean F1 score of {} '.format(epoch_i, val_meanF1_1 )) 
                 torch.save(defModel.state_dict(), model_name_here)
                 saved_models.append(model_name_here)                     
@@ -307,9 +314,9 @@ if __name__ == "__main__":
     annotations, annotations_testdf_, annotations_test1df_, annotations_test2df_, exp_args = FetchTrainingCandidates()
 
     # Combine the training (annotations) and development (annotations_testdf_) dataframes, shuffle them and divide into training and validation sets
-    if exp_args == 'combined':
+    if exp_args.train_data == 'combined':
         fulldf = annotations.append(annotations_testdf_, ignore_index=True)
-    elif exp_args == 'distant-cto': 
+    elif exp_args.train_data == 'distant-cto': 
         fulldf = annotations
 
     fulldf = fulldf.sample(frac=1).reset_index(drop=True)
@@ -409,7 +416,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # PATH_SUM_WRITER = '/home/anjani/DistantCTO/ModelTraining/logs/' + str(fold)
-    PATH_SUM_WRITER = '/home/anjani/DistantCTO/ModelTraining/logs/' + str('noEBM_w_shortAnn_IO_POSciAtten_ActLin')
+    PATH_SUM_WRITER = '/home/anjani/DistantCTO/ModelTraining/logs/' + str('noEBMTrain_w_shortAnnot_SCIPOSAtten_linear')
     writer = SummaryWriter(PATH_SUM_WRITER) # XXX
 
     ##################################################################################
@@ -422,10 +429,17 @@ if __name__ == "__main__":
     ##################################################################################
     # Tell pytorch to run data on this model on the GPU and parallelize it
     ##################################################################################
-    # if torch.cuda.device_count() > 1:
-    #     model = nn.DataParallel(model, device_ids = [0])
-    #     print("Using", len(model.device_ids), " GPUs!")
-    model.cuda()
+    print('Number of devices used: ', torch.cuda.device_count())
+    if exp_args.parallel == 'true':
+        if torch.cuda.device_count() > 1:
+            model = nn.DataParallel(model, device_ids = [0, 1, 2, 3])
+            print("Using", len(model.device_ids), " GPUs!")
+            print("Using", str(model.device_ids), " GPUs!")
+        # model.cuda()
+        model.to(f'cuda:{model.device_ids[0]}')
+    elif exp_args.parallel == 'false':
+        model.to(f'cuda:0') 
+
     print("Done in {} seconds".format(time.time() - st))
 
     ##################################################################################
@@ -451,15 +465,15 @@ if __name__ == "__main__":
     print('##################################################################################')
     print('Begin training...')
     print('##################################################################################')
-    train(model, optimizer, scheduler, train_dataloader, test_dataloader, args, exp_args)
+    # train(model, optimizer, scheduler, train_dataloader, test_dataloader, args, exp_args)
     # train(model, optimizer, scheduler, train_dataloader, development_dataloader, args, exp_args)
     print("Training and validation done in {} seconds".format(time.time() - st))
 
     print('##################################################################################')
     print('Begin test...')
     print('##################################################################################')
-    checkpoint = torch.load(saved_models[-1], map_location='cuda:0')
-    # checkpoint = torch.load('/mnt/nas2/results/Results/systematicReview/Distant_CTO/models/intervention/combined_w_shortAnn_IO_POSciAtten_linear/bert_bilstm_crf_epoch_9_best_model.pth', map_location='cuda:0')
+    # checkpoint = torch.load(saved_models[-1], map_location='cuda:0')
+    checkpoint = torch.load('/mnt/nas2/results/Results/systematicReview/Distant_CTO/models/intervention/combined_w_shortAnn_IO_POSciAtten_CRF/bert_bilstm_crf_epoch_2_best_model.pth', map_location='cuda:0')
     model.load_state_dict( checkpoint )
 
     # # print('Applying the best model on test set (EBM-NLP training set used as test set)...')
