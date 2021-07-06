@@ -30,9 +30,11 @@ def partMatchScore(s, interventionName):
 
 def fullMatchScore(s, interventionName, briefTitleTarget):
     # match_score = sum( n for i,j,n in s.get_matching_blocks() ) / float(len(interventionName))
-
+    all_match_scores = []
     # Return the most confident block (most confident block is block / len(interventionName) == 1.0)
     for eachMatchingBlock in s.get_matching_blocks()[:-1]: # Last block is a dummy block
         match_score = eachMatchingBlock[2] / float(len(interventionName))
         score_block = [match_score, eachMatchingBlock]
-        yield score_block
+        all_match_scores.append( score_block )
+        # yield score_block
+    return all_match_scores

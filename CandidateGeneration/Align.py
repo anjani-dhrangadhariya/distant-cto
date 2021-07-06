@@ -11,6 +11,7 @@ import sys, json, os
 import logging
 import datetime as dt
 import time
+import random
 
 from elasticsearch import Elasticsearch, helpers
 from elasticsearch_dsl import Search,  Q
@@ -82,30 +83,82 @@ def align_highconf_shorttarget(target, source):
 # Collects annotations for all the sentences in the target and returns them
 def align_highconf_longtarget(target, source):
 
-    brief_target_sentences = list()
+    target_sentences = list()
    
     if target is not None :
         # Sentence tokenization
-        brief_target_sentences = sent_tokenize(target)
+        target_sentences = sent_tokenize(target)
         collect_annotations = dict()
         
-        for i, eachSentence in enumerate(brief_target_sentences):
+        # Iterate each sentence
+        for i, eachSentence in enumerate(target_sentences):
 
-            annot = list() # Get's updated for each Intervention name identified
+            annot = list() # Get's updated for each Intervention name identified and for each sentence
             token = list()
 
             s = difflib.SequenceMatcher(None, eachSentence, source, autojunk=True)
             matches = fullMatchScore(s, source, target)
-            for match in matches:
-                if match[0] == 1.0:                     
-                    token_i, annot_i = extractAnnotation(source, eachSentence, match)
-                    annot.extend( annot_i )
-                    token.extend( token_i )
+            match_scores = [item[0] for item in matches ]
+
+            if 1.0 in match_scores:
+                for match in matches:
+                    if match[0] == 1.0:                     
+                        token_i, annot_i = extractAnnotation(source, eachSentence, match)
+                        annot.extend( annot_i )
+                        token.extend( token_i )
+                
             if annot:
                 token_annot = [token, annot, [eachTuple[1]  for eachTuple in nltk.pos_tag_sents([token])[0]]]
                 collect_annotations['sentence' + str(i)] = token_annot
 
     assert len(token) == len(annot)
 
+    return collect_annotations
 
+
+def align_highconf_longtarget_negSent(target, source):
+
+    target_sentences = list()
+   
+    if target is not None :
+        # Sentence tokenization
+        target_sentences = sent_tokenize(target)
+        collect_annotations = dict()
+        
+        # Check if each sentence has the source intervention in it
+        for i, eachSentence in enumerate(target_sentences):
+
+            annot = list() # Get's updated for each Intervention name identified and for each sentence
+            token = list()
+
+            s = difflib.SequenceMatcher(None, eachSentence, source, autojunk=True)
+            matches = fullMatchScore(s, source, target)
+            match_scores = [item[0] for item in matches ]
+
+            if 1.0 in match_scores:
+                for match in matches:
+                    if match[0] == 1.0:                     
+                        token_i, annot_i = extractAnnotation(source, eachSentence, match)
+                        annot.extend( annot_i )
+                        token.extend( token_i )
+                        # print('MATCH 1 sentence' + str(i))
+
+            if annot:
+                token_annot = [token, annot, [eachTuple[1]  for eachTuple in nltk.pos_tag_sents([token])[0]]]
+                # collect_annotations['sentence' + str(i)] = token_annot
+                collect_annotations[str(i)] = token_annot
+
+            if 1.0 not in match_scores and all( list(all(i <= 0.20 for i in match_scores)) ): # very negative sentences (possibility of false negative candidates)
+                # print('VERY NEGATIVE sentence' + str(i))
+                tokenized_negative_sentence_i = eachSentence.split(' ')
+                annotation_negative_sentence_i = [0] * len(tokenized_negative_sentence_i)
+                annot.extend( annotation_negative_sentence_i )
+                token.extend( tokenized_negative_sentence_i )
+
+            if annot:
+                token_annot = [token, annot, [eachTuple[1]  for eachTuple in nltk.pos_tag_sents([token])[0]]]
+                # collect_annotations['sentence' + str(i)] = token_annot
+                collect_annotations[str(i)] = token_annot
+
+    assert len(token) == len(annot)
     return collect_annotations

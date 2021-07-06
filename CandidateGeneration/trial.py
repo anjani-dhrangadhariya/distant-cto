@@ -11,6 +11,7 @@ import sys, json, os
 import logging
 import datetime as dt
 import time
+import random 
 
 from elasticsearch import Elasticsearch, helpers
 from elasticsearch_dsl import Search,  Q
@@ -48,11 +49,26 @@ rootLogger = logging.getLogger()
 rootLogger.addHandler(fileHandler)
 rootLogger.setLevel(logging.INFO)
 
+negative_sents = True
+
 ################################################################################
 # Local functions
 ################################################################################
+# Partitiion a list
+# def partition(list_in, n):
+#     # random.shuffle(list_in)
+#     return [list_in[i::n] for i in range(n)]
+
+def partition(lst, n):
+    """Return successive n-sized chunks from list (lst)."""
+    chunks = []
+    for i in range(0, len(lst), n):
+        chunks.append( lst[i:i + n]  )
+    return chunks
+
 # aggregate the annotations here
 def aggregateLongTarget_annot(agrregateannot_briefSummary):
+    """Aggregate annotations from multiple intervention sources for each target."""
     briefsummary_aggdict = dict()
     for eachAggAnnot in agrregateannot_briefSummary:
         sentenceKey = list(eachAggAnnot.keys())
@@ -65,6 +81,41 @@ def aggregateLongTarget_annot(agrregateannot_briefSummary):
                     if eachItem == 1:
                         briefsummary_aggdict[eachsentenceKey][1][count] = 1
     return briefsummary_aggdict
+
+def pos_neg_trail(aggregated_dictionary):
+    """Generate and return +- trailing annotations."""
+    values_ = []
+    for key, value in aggregated_dictionary.items():
+        values_.extend( value[1] )
+
+    mergedChunks_dictionary = dict()
+    
+    if 1 in values_:
+        # Sort the dictionary
+        aggregated_dictionary_sorted = collections.OrderedDict(sorted(aggregated_dictionary.items()))
+
+        # Partition into chunks
+        chunks = partition( list(aggregated_dictionary_sorted.keys()), 4)
+
+        # Merge each chunk into a single key-value pair
+        for eachChunk in chunks:
+            keyChunks = []
+            valueChunk_sent = []
+            valueChunk_lab = []
+            valueChunk_pos = []
+            for eachChunk_i in eachChunk:
+                keyChunks.append( eachChunk_i )
+                valueChunk_sent.extend( aggregated_dictionary_sorted[eachChunk_i][0] )
+                valueChunk_lab.extend( aggregated_dictionary_sorted[eachChunk_i][1] )
+                valueChunk_pos.extend( aggregated_dictionary_sorted[eachChunk_i][2] )
+
+            assert len(valueChunk_sent) == len(valueChunk_lab) == len(valueChunk_pos)
+
+            mergedKey = str('_'.join(keyChunks))
+            mergedChunks_dictionary[mergedKey] = [valueChunk_sent, valueChunk_lab, valueChunk_pos]
+
+    if bool(mergedChunks_dictionary) == True:
+        return mergedChunks_dictionary
 
 file_write_trial = '/mnt/nas2/data/systematicReview/clinical_trials_gov/Weak_PICO/intervention_data_preprocessed/' + 'extraction1_partofspeech.txt'
 
@@ -91,8 +142,8 @@ intervention_types = []
 
 res = es.search(index="ctofull-index", body={"query": {"match_all": {}}}, size=100)
 print('Total number of records retrieved: ', res['hits']['total']['value'])
-for hit in results_gen: # XXX: Entire CTO
-# for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search results from the CTO
+# for hit in results_gen: # XXX: Entire CTO
+for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search results from the CTO
 
     write_hit = collections.defaultdict(dict) # final dictionary to write to the file...
 
@@ -249,9 +300,7 @@ for hit in results_gen: # XXX: Entire CTO
                 # Match the source intervention to the brief summary
                 ######################################################################################
                 if briefSummaryTarget:
-                    briefSummaryTarget_annot = align_highconf_longtarget(briefSummaryTarget, interventionName)
-                    # print(type(briefSummaryTarget_annot))
-                    # print(briefSummaryTarget_annot)
+                    briefSummaryTarget_annot = align_highconf_longtarget_negSent(briefSummaryTarget, interventionName)
                     if briefSummaryTarget_annot:
                         if 'brief_summary_annot' not in write_intervention:
                             write_intervention['brief_summary_annot'] = [briefSummaryTarget_annot]
@@ -264,7 +313,7 @@ for hit in results_gen: # XXX: Entire CTO
                 # Match the source intervention to the detailed description
                 ######################################################################################
                 if detailedDescriptionTarget:
-                    detailedDescriptionTarget_annot = align_highconf_longtarget(detailedDescriptionTarget, interventionName)
+                    detailedDescriptionTarget_annot = align_highconf_longtarget_negSent(detailedDescriptionTarget, interventionName)
                     if detailedDescriptionTarget_annot:
                         write_intervention['detailed_description_annot'] = [detailedDescriptionTarget_annot]
                         agrregateannot_detailedDescription.append( detailedDescriptionTarget_annot )
@@ -344,7 +393,7 @@ for hit in results_gen: # XXX: Entire CTO
                         # Match the source intervention to the brief summary
                         ######################################################################################
                         if briefSummaryTarget:
-                            briefSummaryTarget_synannot  = align_highconf_longtarget(briefSummaryTarget, eachInterventionOtherName)
+                            briefSummaryTarget_synannot  = align_highconf_longtarget_negSent(briefSummaryTarget, eachInterventionOtherName)
                             if briefSummaryTarget_synannot:
                                 if 'brief_summary_annot' not in write_intervention_syn:
                                     write_intervention_syn['brief_summary_annot'] = [briefSummaryTarget_synannot]
@@ -359,7 +408,7 @@ for hit in results_gen: # XXX: Entire CTO
                         # Match the source intervention to the detailed description
                         ######################################################################################
                         if detailedDescriptionTarget:
-                            detailedDescriptionTarget_synannot  = align_highconf_longtarget(detailedDescriptionTarget, eachInterventionOtherName)
+                            detailedDescriptionTarget_synannot  = align_highconf_longtarget_negSent(detailedDescriptionTarget, eachInterventionOtherName)
                             if detailedDescriptionTarget_synannot:
                                 if 'detailed_description_annot' in write_intervention_syn:
                                     write_intervention_syn['detailed_description_annot'] = [detailedDescriptionTarget_synannot]
@@ -391,20 +440,30 @@ for hit in results_gen: # XXX: Entire CTO
 
             if agrregateannot_briefSummary:
                 briefsummary_aggdict = aggregateLongTarget_annot(agrregateannot_briefSummary)
+                
+                # Mix/merge the aggregated dictionary for +- training
+                if negative_sents == True:
+                    briefsummary_aggdict = pos_neg_trail( briefsummary_aggdict )
+
                 if briefsummary_aggdict:
                     write_hit['aggregate_annot']['brief_summary_annot'] = briefsummary_aggdict
 
             if agrregateannot_detailedDescription:
                 detailedDescription_aggdict = aggregateLongTarget_annot(agrregateannot_detailedDescription)
+
+                # Mix/merge the aggregated dictionary for +- training
+                if negative_sents == True:
+                    detailedDescription_aggdict = pos_neg_trail( detailedDescription_aggdict )
+
                 if detailedDescription_aggdict:
                     write_hit['aggregate_annot']['detailed_description_annot'] = detailedDescription_aggdict
 
         logNCTID = 'Writing ID: ' + NCT_id
         logging.info(logNCTID)
-        with open(file_write_trial, 'a+') as wf:
-            wf.write('\n')
-            json_str = json.dumps(write_hit)
-            wf.write(json_str)
+        # with open(file_write_trial, 'a+') as wf:
+        #     wf.write('\n')
+        #     json_str = json.dumps(write_hit)
+        #     wf.write(json_str)
     except:
         logNCTID = 'Caused exception at the NCT ID: ' + NCT_id
         logging.info(logNCTID)
