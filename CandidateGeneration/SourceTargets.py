@@ -11,6 +11,7 @@ import sys, json, os
 import logging
 import datetime as dt
 import time
+import random 
 
 from elasticsearch import Elasticsearch, helpers
 from elasticsearch_dsl import Search,  Q
@@ -48,11 +49,26 @@ rootLogger = logging.getLogger()
 rootLogger.addHandler(fileHandler)
 rootLogger.setLevel(logging.INFO)
 
+negative_sents = True
+
 ################################################################################
 # Local functions
 ################################################################################
+# Partitiion a list
+# def partition(list_in, n):
+#     # random.shuffle(list_in)
+#     return [list_in[i::n] for i in range(n)]
+
+def partition(lst, n):
+    """Return successive n-sized chunks from list (lst)."""
+    chunks = []
+    for i in range(0, len(lst), n):
+        chunks.append( lst[i:i + n]  )
+    return chunks
+
 # aggregate the annotations here
 def aggregateLongTarget_annot(agrregateannot_briefSummary):
+    """Aggregate annotations from multiple intervention sources for each target."""
     briefsummary_aggdict = dict()
     for eachAggAnnot in agrregateannot_briefSummary:
         sentenceKey = list(eachAggAnnot.keys())
@@ -66,7 +82,42 @@ def aggregateLongTarget_annot(agrregateannot_briefSummary):
                         briefsummary_aggdict[eachsentenceKey][1][count] = 1
     return briefsummary_aggdict
 
-file_write_trial = '/mnt/nas2/data/systematicReview/clinical_trials_gov/Weak_PICO/intervention_data_preprocessed/' + 'extraction1.txt'
+def pos_neg_trail(aggregated_dictionary):
+    """Generate and return +- trailing annotations."""
+    values_ = []
+    for key, value in aggregated_dictionary.items():
+        values_.extend( value[1] )
+
+    mergedChunks_dictionary = dict()
+    
+    if 1 in values_:
+        # Sort the dictionary
+        aggregated_dictionary_sorted = collections.OrderedDict(sorted(aggregated_dictionary.items()))
+
+        # Partition into chunks
+        chunks = partition( list(aggregated_dictionary_sorted.keys()), 4)
+
+        # Merge each chunk into a single key-value pair
+        for eachChunk in chunks:
+            keyChunks = []
+            valueChunk_sent = []
+            valueChunk_lab = []
+            valueChunk_pos = []
+            for eachChunk_i in eachChunk:
+                keyChunks.append( eachChunk_i )
+                valueChunk_sent.extend( aggregated_dictionary_sorted[eachChunk_i][0] )
+                valueChunk_lab.extend( aggregated_dictionary_sorted[eachChunk_i][1] )
+                valueChunk_pos.extend( aggregated_dictionary_sorted[eachChunk_i][2] )
+
+            assert len(valueChunk_sent) == len(valueChunk_lab) == len(valueChunk_pos)
+
+            mergedKey = str('_'.join(keyChunks))
+            mergedChunks_dictionary[mergedKey] = [valueChunk_sent, valueChunk_lab, valueChunk_pos]
+
+    if bool(mergedChunks_dictionary) == True:
+        return mergedChunks_dictionary
+
+file_write_trial = '/mnt/nas2/data/systematicReview/clinical_trials_gov/Weak_PICO/intervention_data_preprocessed/' + 'extraction1_pos_posnegtrail.txt'
 
 ################################################################################
 # Instantiate ElasticSearch
@@ -87,22 +138,20 @@ results_gen = helpers.scan(
 
 match_scores = []
 intervention_types = []
-# sanity_counter = 0
 
-res = es.search(index="ctofull-index", body={"query": {"match_all": {}}}, size=5000)
+res = es.search(index="ctofull-index", body={"query": {"match_all": {}}}, size=100)
 print('Total number of records retrieved: ', res['hits']['total']['value'])
-# for hit in results_gen: # XXX: Entire CTO
-for hit in res['hits']['hits']: # XXX: Only a part search results from the CTO
+for hit in results_gen: # XXX: Entire CTO
+# for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search results from the CTO
 
     write_hit = collections.defaultdict(dict) # final dictionary to write to the file...
-    aggregate_extractions = dict() # collect or aggregate all the intervention annotations for a record region-wise here.
 
     fullstudy = hit['_source']['FullStudiesResponse']['FullStudies'][0]['Study']
     NCT_id = hit['_source']['FullStudiesResponse']['Expression']
     write_hit['id'] = NCT_id
 
     try:
-        # if 'NCT00105235' in NCT_id:
+
         protocol_section = fullstudy['ProtocolSection']
         derieved_section = fullstudy['DerivedSection']
 
@@ -129,6 +178,7 @@ for hit in res['hits']['hits']: # XXX: Only a part search results from the CTO
         if detailedDescriptionTarget:
             detailedDescriptionTarget = preprocess_targets(detailedDescriptionTarget)
 
+
         ################################################################################
         # Get and preprocess sources (XXX sources are plural/multiple structured terms)
         ################################################################################
@@ -139,13 +189,13 @@ for hit in res['hits']['hits']: # XXX: Only a part search results from the CTO
 
         # Source 2: Arms Groups
         armGroup = getArmsGroups(protocol_section)
-        
+
         # Aggregate annotations for each target text
         agrregateannot_officialTitleTarget = []
         agrregateannot_briefTitleTarget = []
         agrregateannot_interventionDescription = []
         agrregateannot_briefSummary = []
-        agrregateannot_detailedDescription = []   
+        agrregateannot_detailedDescription = [] 
 
         intervention_counter = 0
         # XXX Each individual intervention term is iterated here
@@ -158,13 +208,12 @@ for hit in res['hits']['hits']: # XXX: Only a part search results from the CTO
             
             intervention_counter = intervention_counter + 1
             write_intervention['intervention_number'] = intervention_counter
-            # print('________________________________________________________________________________   ', intervention_counter)
 
             # Intervention type 
             interventionType = eachInterventionSource['interventiontype']
             write_intervention['intervention_type'] = interventionType
             intervention_types.append(interventionType)
-            
+
             # Source 1.1: Intervention Name
             if 'interventionname' in eachInterventionSource:
                 interventionName = eachInterventionSource['interventionname']
@@ -172,7 +221,6 @@ for hit in res['hits']['hits']: # XXX: Only a part search results from the CTO
                 write_intervention['intervention_name'] = interventionName
             else: 
                 interventionName = None
-            # print(interventionName)
             
             # Source 1.2: Intervention Other name
             if 'interventionothernamelist' in eachInterventionSource:
@@ -188,229 +236,233 @@ for hit in res['hits']['hits']: # XXX: Only a part search results from the CTO
 
             if interventionName is not None:
 
-                ####################################​##################################################
+                ####################################annotations​##################################################
                 # Candidate Generation 1: Only Intervention names
                 ######################################################################################
                 ######################################################################################
                 # Match the source intervention to the official title
                 ######################################################################################
-
-                # print(officialTitleTarget)
-                officialTitleTarget_token, officialTitleTarget_annot = align_highconf_shorttarget(officialTitleTarget, interventionName)
-                # if officialTitleTarget_annot:
-                #     write_hit['aggregate_annot']['official_title'] = officialTitleTarget_token
-                #     write_intervention['official_title'] = officialTitleTarget_token
-                #     write_intervention['official_title_annot'] = officialTitleTarget_annot
-                    # if not agrregateannot_officialTitleTarget:
-                    #     agrregateannot_officialTitleTarget.extend(officialTitleTarget_annot)
-                    # elif agrregateannot_officialTitleTarget:
-                    #     for count, eachItem in enumerate(officialTitleTarget_annot):
-                    #         if eachItem == 1:
-                    #             agrregateannot_officialTitleTarget[count] = 1
+                if officialTitleTarget is not None and len( officialTitleTarget.split(' ') ) >= 1:
+                    officialTitleTarget_token, officialTitleTarget_annot = align_highconf_shorttarget(officialTitleTarget, interventionName)
+                    if officialTitleTarget_annot:
+                        write_hit['aggregate_annot']['official_title'] = officialTitleTarget_token
+                        write_hit['aggregate_annot']['official_title_pos'] = [eachTuple[1]  for eachTuple in nltk.pos_tag_sents([officialTitleTarget_token])[0]]
+                        write_intervention['official_title'] = officialTitleTarget_token
+                        write_intervention['official_title_annot'] = officialTitleTarget_annot
+                        if not agrregateannot_officialTitleTarget:
+                            agrregateannot_officialTitleTarget.extend(officialTitleTarget_annot)
+                        elif agrregateannot_officialTitleTarget:
+                            for count, eachItem in enumerate(officialTitleTarget_annot):
+                                if eachItem == 1:
+                                    agrregateannot_officialTitleTarget[count] = 1
 
                 ######################################################################################
                 # Match the source intervention to the brief title
                 ######################################################################################
-                briefTitleTarget_token, briefTitleTarget_annot = align_highconf_shorttarget(briefTitleTarget, interventionName)
-                # if briefTitleTarget_annot:
-                #     write_hit['aggregate_annot']['brief_title'] = briefTitleTarget_token
-                #     write_intervention['brief_title'] = briefTitleTarget_token
-                #     write_intervention['brief_title_annot'] = briefTitleTarget_annot
-                    # if not agrregateannot_briefTitleTarget:
-                    #     agrregateannot_briefTitleTarget.extend(briefTitleTarget_annot)
-                    # elif agrregateannot_briefTitleTarget:
-                    #     for count, eachItem in enumerate(briefTitleTarget_annot):
-                    #         if eachItem == 1:
-                    #             agrregateannot_briefTitleTarget[count] = 1
-            
+                
+                if briefTitleTarget is not None and len( briefTitleTarget.split(' ') ) >= 1:
+                    briefTitleTarget_token, briefTitleTarget_annot = align_highconf_shorttarget(briefTitleTarget, interventionName)
+
+                    if briefTitleTarget_annot:
+                        write_hit['aggregate_annot']['brief_title'] = briefTitleTarget_token
+                        write_hit['aggregate_annot']['brief_title_pos'] = [eachTuple[1]  for eachTuple in nltk.pos_tag_sents([briefTitleTarget_token])[0]]
+                        write_intervention['brief_title'] = briefTitleTarget_token
+                        write_intervention['brief_title_annot'] = briefTitleTarget_annot
+                        if not agrregateannot_briefTitleTarget:
+                            agrregateannot_briefTitleTarget.extend(briefTitleTarget_annot)
+                        elif agrregateannot_briefTitleTarget:
+                            for count, eachItem in enumerate(briefTitleTarget_annot):
+                                if eachItem == 1:
+                                    agrregateannot_briefTitleTarget[count] = 1
+
                 ######################################################################################
                 # Match the source intervention to the intervention description
-                ###################################################token, annot###################################  
-                
-                interventionDescription_token, interventionDescription_annot = align_highconf_shorttarget(interventionDescription, interventionName)                       
-                # #print('Intervention description target: ', interventionDescription_annot)
-                # if interventionDescription_annot:
-                #     write_intervention['intervention_description'] = interventionDescription_token
-                #     write_intervention['intervention_description_annot'] = interventionDescription_annot
-                #     agrregateannot_interventionDescription.append( [interventionDescription_token, interventionDescription_annot] )
+                ######################################################################################  
+               
+                if interventionDescription:
+                    interventionDescription_annot_ = align_highconf_longtarget(interventionDescription, interventionName)
+
+                    interventionDescription_annot = dict()
+                    for key, value in interventionDescription_annot_.items():
+                        if len(value[0]) >= 1:
+                            interventionDescription_annot[key] = value
+
+                    if interventionDescription_annot:
+                        if 'interventionDescription_annot' not in write_intervention:
+                            write_intervention['interventionDescription_annot'] = [interventionDescription_annot]
+                            agrregateannot_interventionDescription.append( interventionDescription_annot )
+                        elif 'interventionDescription_annot' in write_intervention:
+                            write_intervention['interventionDescription_annot'].append(interventionDescription_annot)
+                            agrregateannot_interventionDescription.append( interventionDescription_annot )
 
                 ######################################################################################
                 # Match the source intervention to the brief summary
                 ######################################################################################
                 if briefSummaryTarget:
-                    briefSummaryTarget_annot = align_highconf_longtarget(briefSummaryTarget, interventionName)
-                #     # print(type(briefSummaryTarget_annot))
-                #     # print(briefSummaryTarget_annot)
-                #     if briefSummaryTarget_annot:
-                #         if 'brief_summary_annot' not in write_intervention:
-                #             write_intervention['brief_summary_annot'] = [briefSummaryTarget_annot]
-                #             agrregateannot_briefSummary.append( briefSummaryTarget_annot )
-                #         elif 'brief_summary_annot' in write_intervention:
-                #             write_intervention['brief_summary_annot'].append(briefSummaryTarget_annot)
-                #             agrregateannot_briefSummary.append( briefSummaryTarget_annot )
+                    briefSummaryTarget_annot = align_highconf_longtarget_negSent(briefSummaryTarget, interventionName)
+                    if briefSummaryTarget_annot:
+                        if 'brief_summary_annot' not in write_intervention:
+                            write_intervention['brief_summary_annot'] = [briefSummaryTarget_annot]
+                            agrregateannot_briefSummary.append( briefSummaryTarget_annot )
+                        elif 'brief_summary_annot' in write_intervention:
+                            write_intervention['brief_summary_annot'].append(briefSummaryTarget_annot)
+                            agrregateannot_briefSummary.append( briefSummaryTarget_annot )
 
                 ######################################################################################
                 # Match the source intervention to the detailed description
                 ######################################################################################
                 if detailedDescriptionTarget:
-                    detailedDescriptionTarget_annot = align_highconf_longtarget(detailedDescriptionTarget, interventionName)
-                #     if detailedDescriptionTarget_annot:
-                #         write_intervention['detailed_description_annot'] = [detailedDescriptionTarget_annot]
-                #         agrregateannot_detailedDescription.append( detailedDescriptionTarget_annot )
-                #     elif 'detailed_description_annot' in write_intervention:
-                #         write_intervention['detailed_description_annot'].append(detailedDescriptionTarget_annot)
-                #         agrregateannot_detailedDescription.append( detailedDescriptionTarget_annot )
+                    detailedDescriptionTarget_annot = align_highconf_longtarget_negSent(detailedDescriptionTarget, interventionName)
+                    if detailedDescriptionTarget_annot:
+                        write_intervention['detailed_description_annot'] = [detailedDescriptionTarget_annot]
+                        agrregateannot_detailedDescription.append( detailedDescriptionTarget_annot )
+                    elif 'detailed_description_annot' in write_intervention:
+                        write_intervention['detailed_description_annot'].append(detailedDescriptionTarget_annot)
+                        agrregateannot_detailedDescription.append( detailedDescriptionTarget_annot )
 
                 # The main intervention term is tackled. Now tackle the intervention synonyms...
                 #####################################################################################
                 #  Candidate Generation 2: Intervention other names
                 #####################################################################################
 
-                # if interventionOtherNames:
+                if interventionOtherNames:
 
-                #     interventionSynonyms = interventionOtherNames['interventionothername']
+                    interventionSynonyms = interventionOtherNames['interventionothername']
 
-                #     # add a sub-dict to the "write_intervention" dictionary
-                #     write_intervention_syn = dict()
+                    # add a sub-dict to the "write_intervention" dictionary
+                    write_intervention_syn = dict()
 
-                #     for i, eachInterventionOtherName in enumerate(interventionSynonyms):
+                    for i, eachInterventionOtherName in enumerate(interventionSynonyms):
 
-                #         write_intervention_syn['synonym_name'] = eachInterventionOtherName
+                        write_intervention_syn['synonym_name'] = eachInterventionOtherName
 
-                #         ######################################################################################
-                #         # Match the source intervention to the official title
-                #         #######################################################################################
-                #         officialTitleTarget_syntoken, officialTitleTarget_synannot = align_highconf_shorttarget(officialTitleTarget, eachInterventionOtherName)
-                #         if officialTitleTarget_synannot:
-                #             write_hit['aggregate_annot']['official_title'] = officialTitleTarget_syntoken
-                #             write_intervention_syn['official_title'] = officialTitleTarget_syntoken
-                #             write_intervention_syn['official_title_annot'] = officialTitleTarget_synannot
-                #             if not agrregateannot_officialTitleTarget:
-                #                 agrregateannot_officialTitleTarget.extend(officialTitleTarget_synannot)
-                #             elif agrregateannot_officialTitleTarget:
-                #                 for count, eachItem in enumerate(officialTitleTarget_synannot):
-                #                     if eachItem == 1:
-                #                         agrregateannot_officialTitleTarget[count] = 1
+                        ######################################################################################
+                        # Match the source intervention to the official title
+                        #######################################################################################
+                        if officialTitleTarget is not None and len( officialTitleTarget.split(' ') ) >= 1:
+                            officialTitleTarget_syntoken, officialTitleTarget_synannot = align_highconf_shorttarget(officialTitleTarget, eachInterventionOtherName)
+                            if officialTitleTarget_synannot:
+                                write_hit['aggregate_annot']['official_title'] = officialTitleTarget_syntoken
+                                write_hit['aggregate_annot']['official_title_pos'] = [eachTuple[1]  for eachTuple in nltk.pos_tag_sents([officialTitleTarget_syntoken])[0]]
+                                write_intervention_syn['official_title'] = officialTitleTarget_syntoken
+                                write_intervention_syn['official_title_annot'] = officialTitleTarget_synannot
+                                if not agrregateannot_officialTitleTarget:
+                                    agrregateannot_officialTitleTarget.extend(officialTitleTarget_synannot)
+                                elif agrregateannot_officialTitleTarget:
+                                    for count, eachItem in enumerate(officialTitleTarget_synannot):
+                                        if eachItem == 1:
+                                            agrregateannot_officialTitleTarget[count] = 1
 
-                #         ######################################################################################
-                #         # Match the source intervention to the brief title
-                #         ######################################################################################
+                        ######################################################################################
+                        # Match the source intervention to the brief title
+                        ######################################################################################
+                        if briefTitleTarget is not None and len( officialTitleTarget.split(' ') ) >= 1:
+                            briefTitleTarget_syntoken, briefTitleTarget_synannot = align_highconf_shorttarget(briefTitleTarget, eachInterventionOtherName)
+                            if briefTitleTarget_synannot:
+                                write_hit['aggregate_annot']['brief_title'] = briefTitleTarget_syntoken
+                                write_hit['aggregate_annot']['brief_title_pos'] = [eachTuple[1]  for eachTuple in nltk.pos_tag_sents([briefTitleTarget_syntoken])[0]]
+                                write_intervention_syn['brief_title'] = briefTitleTarget_syntoken
+                                write_intervention_syn['brief_title_annot'] = briefTitleTarget_synannot
+                                if not agrregateannot_briefTitleTarget:
+                                    agrregateannot_briefTitleTarget.extend(briefTitleTarget_synannot)
+                                elif agrregateannot_briefTitleTarget:
+                                    for count, eachItem in enumerate(briefTitleTarget_synannot):
+                                        if eachItem == 1:
+                                            agrregateannot_briefTitleTarget[count] = 1
+
+                        ######################################################################################
+                        # Match the source intervention to the intervention description
+                        ######################################################################################
+                        if interventionDescription: 
+                            interventionDescription_synannot_ = align_highconf_longtarget(interventionDescription, eachInterventionOtherName) 
+                            interventionDescription_synannot = dict()
+                            for key, value in interventionDescription_synannot_.items():
+                                if len(value[0]) >= 1:
+                                    interventionDescription_synannot[key] = value
+
+                            if interventionDescription_synannot:
+                                if 'interventionDescription_annot' not in write_intervention_syn:
+                                    write_intervention_syn['interventionDescription_annot'] = [interventionDescription_synannot]
+                                    agrregateannot_interventionDescription.append( interventionDescription_synannot )
+                                elif 'interventionDescription_annot' in write_intervention_syn:
+                                    write_intervention_syn['interventionDescription_annot'].append(interventionDescription_synannot)
+                                    agrregateannot_interventionDescription.append( interventionDescription_synannot )
+
+                        ######################################################################################
+                        # Match the source intervention to the brief summary
+                        ######################################################################################
+                        if briefSummaryTarget:
+                            briefSummaryTarget_synannot  = align_highconf_longtarget_negSent(briefSummaryTarget, eachInterventionOtherName)
+                            if briefSummaryTarget_synannot:
+                                if 'brief_summary_annot' not in write_intervention_syn:
+                                    write_intervention_syn['brief_summary_annot'] = [briefSummaryTarget_synannot]
+                                    agrregateannot_briefSummary.append( briefSummaryTarget_synannot )
+                                elif 'brief_summary_annot' in write_intervention_syn:
+                                    write_intervention_syn['brief_summary_annot'].append(briefSummaryTarget_synannot)
+                                    agrregateannot_briefSummary.append( briefSummaryTarget_synannot )
+                                    # tempAnnot = write_intervention['brief_summary_annot']
+                                    # agrregateannot_briefSummary.append(tempAnnot)
+
+                        ######################################################################################
+                        # Match the source intervention to the detailed description
+                        ######################################################################################
+                        if detailedDescriptionTarget:
+                            detailedDescriptionTarget_synannot  = align_highconf_longtarget_negSent(detailedDescriptionTarget, eachInterventionOtherName)
+                            if detailedDescriptionTarget_synannot:
+                                if 'detailed_description_annot' in write_intervention_syn:
+                                    write_intervention_syn['detailed_description_annot'] = [detailedDescriptionTarget_synannot]
+                                    agrregateannot_detailedDescription.append( detailedDescriptionTarget_synannot )
+                                elif 'detailed_description_annot' in write_intervention_syn:
+                                    write_intervention_syn['detailed_description_annot'].append(detailedDescriptionTarget_synannot)
+                                    agrregateannot_detailedDescription.append( detailedDescriptionTarget_synannot )
+                                    # tempAnnot = write_intervention['detailed_description_annot']
+                                    # agrregateannot_detailedDescription.append(tempAnnot)
                         
-                #         briefTitleTarget_syntoken, briefTitleTarget_synannot = align_highconf_shorttarget(briefTitleTarget, eachInterventionOtherName)
-                #         if briefTitleTarget_synannot:
-                #             write_hit['aggregate_annot']['brief_title'] = briefTitleTarget_syntoken
-                #             write_intervention_syn['brief_title'] = briefTitleTarget_syntoken
-                #             write_intervention_syn['brief_title_annot'] = briefTitleTarget_synannot
-                #             if not agrregateannot_briefTitleTarget:
-                #                 agrregateannot_briefTitleTarget.extend(briefTitleTarget_synannot)
-                #             elif agrregateannot_briefTitleTarget:
-                #                 for count, eachItem in enumerate(briefTitleTarget_synannot):
-                #                     if eachItem == 1:
-                #                         agrregateannot_briefTitleTarget[count] = 1
 
-                #         ######################################################################################
-                #         # Match the source intervention to the intervention description
-                #         ######################################################################################  
-                        
-                #         interventionDescription_syntoken, interventionDescription_synannot = align_highconf_shorttarget(interventionDescription, eachInterventionOtherName) 
-                #         if interventionDescription_synannot:
-                #             write_intervention_syn['intervention_description'] = interventionDescription_syntoken
-                #             write_intervention_syn['intervention_description_annot'] = interventionDescription_synannot
-                #             agrregateannot_interventionDescription.append( [interventionDescription_syntoken, interventionDescription_synannot] )
-
-                #         ######################################################################################
-                #         # Match the source intervention to the brief summary
-                #         ######################################################################################
-                #         if briefSummaryTarget:
-                #             briefSummaryTarget_synannot  = align_highconf_longtarget(briefSummaryTarget, eachInterventionOtherName)
-                #             if briefSummaryTarget_synannot:
-                #                 if 'brief_summary_annot' not in write_intervention_syn:
-                #                     write_intervention_syn['brief_summary_annot'] = [briefSummaryTarget_synannot]
-                #                     agrregateannot_briefSummary.append( briefSummaryTarget_synannot )
-                #                 elif 'brief_summary_annot' in write_intervention_syn:
-                #                     write_intervention_syn['brief_summary_annot'].append(briefSummaryTarget_synannot)
-                #                     agrregateannot_briefSummary.append( briefSummaryTarget_synannot )
-                #                     # tempAnnot = write_intervention['brief_summary_annot']
-                #                     # agrregateannot_briefSummary.append(tempAnnot)
-
-                #         ######################################################################################
-                #         # Match the source intervention to the detailed description
-                #         ######################################################################################
-                #         if detailedDescriptionTarget:
-                #             detailedDescriptionTarget_synannot  = align_highconf_longtarget(detailedDescriptionTarget, eachInterventionOtherName)
-                #             if detailedDescriptionTarget_synannot:
-                #                 if 'detailed_description_annot' in write_intervention_syn:
-                #                     write_intervention_syn['detailed_description_annot'] = [detailedDescriptionTarget_synannot]
-                #                     agrregateannot_detailedDescription.append( detailedDescriptionTarget_synannot )
-                #                 elif 'detailed_description_annot' in write_intervention_syn:
-                #                     write_intervention_syn['detailed_description_annot'].append(detailedDescriptionTarget_synannot)
-                #                     agrregateannot_detailedDescription.append( detailedDescriptionTarget_synannot )
-                #                     # tempAnnot = write_intervention['detailed_description_annot']
-                #                     # agrregateannot_detailedDescription.append(tempAnnot)
-                        
-
-                #         # Add to the "write_intervention" here
-                #         subInterventionCounter = 'syn_' + str(i)
-                #         write_intervention[subInterventionCounter] = write_intervention_syn
+                        # Add to the "write_intervention" here
+                        subInterventionCounter = 'syn_' + str(i)
+                        write_intervention[subInterventionCounter] = write_intervention_syn
 
                 # # Write the intervention section to the hit dictionary
-                # write_hit['extraction1'][intervention_counter] = write_intervention
+                write_hit['extraction1'][intervention_counter] = write_intervention
 
-            # if agrregateannot_officialTitleTarget:
-            #     # sanity_counter = sanity_counter + 1
-            #     write_hit['aggregate_annot']['official_title_annot'] = agrregateannot_officialTitleTarget
-            # if agrregateannot_briefTitleTarget:
-            #     # sanity_counter = sanity_counter + 1
-            #     write_hit['aggregate_annot']['brief_title_annot'] = agrregateannot_briefTitleTarget
-            # if agrregateannot_interventionDescription:
-            #     write_hit['aggregate_annot']['intervention_description_annot'] = agrregateannot_interventionDescription # Writes both tokens and annotations
-            
-            # if agrregateannot_briefSummary:
-            #     briefsummary_aggdict = aggregateLongTarget_annot(agrregateannot_briefSummary)
-            #     if briefsummary_aggdict:
-            #         write_hit['aggregate_annot']['brief_summary_annot'] = briefsummary_aggdict
+            if agrregateannot_officialTitleTarget:
+                write_hit['aggregate_annot']['official_title_annot'] = agrregateannot_officialTitleTarget
 
-            # if agrregateannot_detailedDescription:
-            #     detailedDescription_aggdict = aggregateLongTarget_annot(agrregateannot_detailedDescription)
-            #     if detailedDescription_aggdict:
-            #         write_hit['aggregate_annot']['detailed_description_annot'] = detailedDescription_aggdict
+            if agrregateannot_briefTitleTarget:
+                write_hit['aggregate_annot']['brief_title_annot'] = agrregateannot_briefTitleTarget
 
-        # write the annotation to the annotation file here...
-        # Extraction_1_confidence_1
-        # if detailedDescription_aggdict or briefsummary_aggdict or interventionDescription_annot or briefTitleTarget_annot or officialTitleTarget_annot:
-        #     # Log the information about the NCT ID hit that is already written
-        #     logNCTID = 'Writing ID: ' + NCT_id
-        #     logging.info(logNCTID)
-        #     with open(file_write_trial, 'a+') as wf:
-        #         wf.write('\n')
-        #         json_str = json.dumps(write_hit)
-        #         wf.write(json_str)
+            if agrregateannot_interventionDescription:
+                interventionDescription_aggdict = aggregateLongTarget_annot(agrregateannot_interventionDescription)
+                if interventionDescription_aggdict:
+                    write_hit['aggregate_annot']['intervention_description_annot'] = interventionDescription_aggdict
 
+            if agrregateannot_briefSummary:
+                briefsummary_aggdict = aggregateLongTarget_annot(agrregateannot_briefSummary)
+                
+                # Mix/merge the aggregated dictionary for +- training
+                if negative_sents == True:
+                    briefsummary_aggdict = pos_neg_trail( briefsummary_aggdict )
+
+                if briefsummary_aggdict:
+                    write_hit['aggregate_annot']['brief_summary_annot'] = briefsummary_aggdict
+
+            if agrregateannot_detailedDescription:
+                detailedDescription_aggdict = aggregateLongTarget_annot(agrregateannot_detailedDescription)
+
+                # Mix/merge the aggregated dictionary for +- training
+                if negative_sents == True:
+                    detailedDescription_aggdict = pos_neg_trail( detailedDescription_aggdict )
+
+                if detailedDescription_aggdict:
+                    write_hit['aggregate_annot']['detailed_description_annot'] = detailedDescription_aggdict
+
+        logNCTID = 'Writing ID: ' + NCT_id
+        logging.info(logNCTID)
+        # with open(file_write_trial, 'a+') as wf:
+        #     wf.write('\n')
+        #     json_str = json.dumps(write_hit)
+        #     wf.write(json_str)
     except:
-        # Log the information about the NCT ID hit that is already written
         logNCTID = 'Caused exception at the NCT ID: ' + NCT_id
-        print(logNCTID)
-        # logging.info(logNCTID)
-
-    # print('Total number of synonym matches identified: ', match_scores.count(1.0))
-
-# print(sanity_counter)
-
-# counts = Counter(intervention_types)
-# labels, values = zip(*counts.items())
-# # sort your values in descending order
-# indSort = np.argsort(values)[::-1]
-
-# # rearrange your data
-# labels = np.array(labels)[indSort]
-# values = np.array(values)[indSort]
-
-# indexes = np.arange(len(labels))
-
-# bar_width = 0.35
-# plt.bar(indexes, values)
-
-# # add labels
-# plt.xticks(indexes + bar_width, labels)
-# plt.xticks(rotation=90)
-# plt.savefig('/home/anjani/PICOrecognition/images/interventiontypes_bestconfidence.png', dpi=400, bbox_inches='tight')
+        logging.info(logNCTID)
