@@ -50,7 +50,7 @@ from transformers import AutoTokenizer, AutoModel
 
 
 # Import data getters
-from Models.HelperFunctions import get_packed_padded_output
+from Models.HelperFunctions import get_packed_padded_output, get_packed_padded_output_dataparallel
 
 class SCIBERTPOSAttenActLin(nn.Module):
 
@@ -97,11 +97,12 @@ class SCIBERTPOSAttenActLin(nn.Module):
 
         # one hot encode POS tags
         input_pos = input_pos
-        packed_pos_input, pos_perm_idx, pos_seq_lengths = get_packed_padded_output(input_pos.float(), input_ids, attention_mask, self.tokenizer)
+        packed_pos_input, pos_perm_idx, pos_seq_lengths, total_length_pos = get_packed_padded_output_dataparallel(input_pos.float(), input_ids, attention_mask, self.tokenizer)
+        self.lstmpos_layer.flatten_parameters()
         packed_pos_output, (ht_pos, ct_pos) = self.lstmpos_layer(packed_pos_input)
 
         # Unpack and reorder the output
-        pos_output, pos_input_sizes = pad_packed_sequence(packed_pos_output, batch_first=True)
+        pos_output, pos_input_sizes = pad_packed_sequence(packed_pos_output, batch_first=True, total_length=total_length_pos)
         _, unperm_idx = pos_perm_idx.sort(0)
         lstm_pos_output = pos_output[unperm_idx]
         seq_lengths_ordered = pos_seq_lengths[unperm_idx]
@@ -128,11 +129,12 @@ class SCIBERTPOSAttenActLin(nn.Module):
         concatenatedVectors = concatenatedVectors.cuda()
 
         # lstm with masks (same as attention masks)
-        packed_input, perm_idx, seq_lengths = get_packed_padded_output(concatenatedVectors, input_ids, attention_mask, self.tokenizer)
+        packed_input, perm_idx, seq_lengths, total_length_concat = get_packed_padded_output_dataparallel(concatenatedVectors, input_ids, attention_mask, self.tokenizer)
+        self.lstm_layer.flatten_parameters()
         packed_output, (ht, ct) = self.lstm_layer(packed_input)
 
         # Unpack and reorder the output
-        output, input_sizes = pad_packed_sequence(packed_output, batch_first=True)
+        output, input_sizes = pad_packed_sequence(packed_output, batch_first=True, total_length=total_length_concat)
         _, unperm_idx = perm_idx.sort(0)
         lstm_output = output[unperm_idx] # lstm_output.shape = shorter than the padded torch.Size([6, 388, 512])
         seq_lengths_ordered = seq_lengths[unperm_idx]

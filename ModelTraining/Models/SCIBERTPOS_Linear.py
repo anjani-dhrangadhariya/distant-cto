@@ -156,6 +156,9 @@ class SCIBERTPOSLinear(nn.Module):
         # Cross-entropy loss calculation
         masked_probs = torch.masked_select( probablity.view( (-1, 2) ) , mask.view((-1)).unsqueeze(-1) )
         masked_labs = torch.masked_select(labels, mask)
+        # loss = self.loss_fct( masked_probs.view((-1, 2)) , masked_labs  )
         loss = self.loss_fct( masked_probs.view((-1, 2)) , masked_labs  )
 
-        return loss, max_probs.indices, labels, mask
+
+        return loss, probablity, labels, mask
+        # return loss, max_probs.indices, labels, mask

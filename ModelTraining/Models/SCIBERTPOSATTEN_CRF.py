@@ -157,8 +157,8 @@ class SCIBERTPOSAttenCRF(nn.Module):
         # log reg
         probablities = F.relu ( self.hidden2tag( lstm_output ) )
  
-        # CRF emissions
-        loss = self.crf_layer(probablities, labels, reduction='token_mean', mask = None)
+        # CRF emissions (without mask)
+        loss = self.crf_layer(probablities, labels, reduction='token_mean')
 
         emissions_ = self.crf_layer.decode( probablities , mask = None)
         emissions = [item for sublist in emissions_ for item in sublist] # flatten the nest list of emissions

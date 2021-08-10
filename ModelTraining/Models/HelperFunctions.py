@@ -62,7 +62,7 @@ def get_packed_padded_output(b_sequence_output, b_input_ids, b_input_mask, token
     b_masked_padded_sorted_output_ = b_sequence_output[perm_idx]
 
     # Pack the sorted masked padded output for input to the LSTM layer
-    packed_input = pack_padded_sequence(b_masked_padded_sorted_output_, seq_lengths.cpu().numpy(), batch_first=True)
+    packed_input = pack_padded_sequence(b_masked_padded_sorted_output_, seq_lengths.cpu(), batch_first=True)
     # packed_input.to(f'cuda:{model.device_ids[0]}')
 
     return packed_input, perm_idx, seq_lengths
@@ -71,7 +71,7 @@ def get_packed_padded_output(b_sequence_output, b_input_ids, b_input_mask, token
 def get_packed_padded_output_dataparallel(b_sequence_output, b_input_ids, b_input_mask, tokenizer):
     
     # Sequence lengths to sort and to let LSTM know what are <PAD> tokens
-    sequence_lengths = b_input_mask.sum(dim = 1) # 0 = PAD, 1 = other
+    sequence_lengths = b_input_mask.sum(dim = 0) # 0 = PAD, 1 = other
 
     # Sort masked padded embedding outputs according to sequence length
     seq_lengths, perm_idx = sequence_lengths.sort(0, descending=True)
@@ -81,7 +81,7 @@ def get_packed_padded_output_dataparallel(b_sequence_output, b_input_ids, b_inpu
     total_length = b_masked_padded_sorted_output_.size(1)
 
     # Pack the sorted masked padded output for input to the LSTM layer
-    packed_input = pack_padded_sequence(b_masked_padded_sorted_output_, seq_lengths.cpu().numpy(), batch_first=True)
+    packed_input = pack_padded_sequence(b_masked_padded_sorted_output_, seq_lengths.cpu(), batch_first=True)
     # packed_input.to(f'cuda:{model.device_ids[0]}')
 
     return packed_input, perm_idx, seq_lengths, total_length

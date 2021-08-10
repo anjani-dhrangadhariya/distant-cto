@@ -85,6 +85,9 @@ class SCIBERTPOSAttenLinear(nn.Module):
             self.lstm_layer = nn.LSTM(input_size=788, hidden_size = self.hidden_dim, num_layers = 1, bidirectional=bidirectional, batch_first=True)
             self.hidden2tag = nn.Linear(512, 2)
 
+        # ReLU
+        self.relu = nn.ReLU()
+
         # loss calculation
         self.loss_fct = nn.CrossEntropyLoss()
 
@@ -155,7 +158,7 @@ class SCIBERTPOSAttenLinear(nn.Module):
         labels *= mask.long()
 
         # log reg
-        probablity = F.relu ( self.hidden2tag( lstm_output ) )
+        probablity = self.relu( self.hidden2tag( lstm_output ) )
         max_probs = torch.max(probablity, dim=2) # get the highest of two probablities
         logits = max_probs.indices.flatten()
  
