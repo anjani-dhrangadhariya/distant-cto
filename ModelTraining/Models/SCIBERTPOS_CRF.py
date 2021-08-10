@@ -137,9 +137,12 @@ class SCIBERTPOSCRF(nn.Module):
             & (labels != 100)
         )
 
-        # on the first time steps
+        # on the first time steps XXX CLS token is active at position 0
         for eachIndex in range( mask.shape[0] ):
             mask[eachIndex, 0] = True
+
+        for eachIndex in range( labels.shape[0] ):
+            labels[eachIndex, 0] = 0
 
         mask_expanded = mask.unsqueeze(-1).expand(lstm_output.size())
         lstm_output *= mask_expanded.float()
@@ -148,10 +151,14 @@ class SCIBERTPOSCRF(nn.Module):
         # log reg
         probablities = F.relu ( self.hidden2tag( lstm_output ) )
  
-        # CRF emissions
-        loss = self.crf_layer(probablities, labels, reduction='token_mean', mask = mask)
+        # CRF emissions (with mask)
+        # loss = self.crf_layer(probablities, labels, reduction='token_mean', mask = mask)
 
-        emissions_ = self.crf_layer.decode( probablities , mask = mask)
+        # CRF emissions (without mask)
+        loss = self.crf_layer(probablities, labels, reduction='token_mean')
+
+        # emissions_ = self.crf_layer.decode( probablities , mask = mask )
+        emissions_ = self.crf_layer.decode( probablities , mask = None)
         emissions = [item for sublist in emissions_ for item in sublist] # flatten the nest list of emissions
 
         target_emissions = torch.zeros(lstm_output.shape[0], lstm_output.shape[1])

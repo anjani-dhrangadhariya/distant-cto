@@ -45,6 +45,7 @@ from torchcrf import CRF
 from transformers import BertModel, BertTokenizer, BertConfig, BertForTokenClassification
 from transformers import AdamW, BertConfig 
 from transformers import get_linear_schedule_with_warmup
+from transformers import AutoTokenizer
 from transformers import AutoTokenizer, AutoModel
 
 
@@ -113,6 +114,13 @@ class SCIBERTCRF(nn.Module):
             & (labels != 100)
         )
 
+        # on the first time steps XXX CLS token is active at position 0
+        for eachIndex in range( mask.shape[0] ):
+            mask[eachIndex, 0] = True
+
+        for eachIndex in range( labels.shape[0] ):
+            labels[eachIndex, 0] = 0
+
         mask_expanded = mask.unsqueeze(-1).expand(lstm_output.size())
         lstm_output *= mask_expanded.float()
         labels *= mask.long()
@@ -121,9 +129,14 @@ class SCIBERTCRF(nn.Module):
         probablities = F.relu ( self.hidden2tag( lstm_output ) )
 
         # CRF emissions
-        loss = self.crf_layer(probablities, labels, reduction='token_mean')
+        loss = self.crf_layer(probablities, labels, reduction='token_mean', mask = None)
 
-        emissions_ = self.crf_layer.decode( probablities )
+        emissions_ = self.crf_layer.decode( probablities , mask = None)
         emissions = [item for sublist in emissions_ for item in sublist] # flatten the nest list of emissions
 
-        return loss, torch.Tensor(emissions_), labels, mask
+        target_emissions = torch.zeros(lstm_output.shape[0], lstm_output.shape[1])
+        target_emissions = target_emissions.cuda()
+        for eachIndex in range( target_emissions.shape[0] ):
+            target_emissions[ eachIndex, :torch.tensor( emissions_[eachIndex] ).shape[0] ] = torch.tensor( emissions_[eachIndex] )
+        
+        return loss, target_emissions, labels, mask
