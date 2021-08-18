@@ -20,6 +20,8 @@ import difflib, re
 import nltk
 from nltk.tokenize import WhitespaceTokenizer, sent_tokenize, word_tokenize
 
+from operator import add
+
 from collections import Counter
 from collections import defaultdict
 import collections
@@ -33,41 +35,14 @@ from pylab import *
 from Preprocessing import *
 from ExtractData import *
 from Scoring import *
-
-def extractAnnotation(source, target, match):
-    
-    token = list()
-    annot = list()
-    
-    span_generator = WhitespaceTokenizer().span_tokenize(target)
-
-    annotation_start_position = match[1][0]
-    annotation_stop_position = match[1][0] + match[1][2]
-
-    annotation = [0] * len(target)
-    for n, i in enumerate(annotation):
-        if n >= annotation_start_position and n <= annotation_stop_position:
-            annotation[n] = 1
-
-    for span in span_generator:
-        token_ = target[span[0]:span[1]]
-
-        annot_ = annotation[span[0]:span[1]]
-        max_element_i = Counter(annot_)
-        max_element = max_element_i.most_common(1)[0][0]
-        #annot_correct = [max_element] * len(annot_)
-
-        token.append(token_)
-        annot.append(max_element)
-
-    # Check if the number of annotations match number of tokens present in the sentence
-    assert len(token) == len(annot)
-        
-    return token, annot
+from ExtractAnnot import *
+from SourceTargets import *
 
 def align_highconf_shorttarget(target, source):
     annot = list() # Get's updated for each Intervention name identified
     token = list()
+    token_i = list()
+    annot_i = list()
 
     if target is not None:
         # Match the source to the target
@@ -75,10 +50,21 @@ def align_highconf_shorttarget(target, source):
         matches = fullMatchScore(s, source, target)
         for match in matches:
             if match[0] == 1.0:                    
-                token, annot = extractAnnotation(source, target, match)
+                token, annot = extract1Annotation(source, target, match)
+            # if match[0] >= 0.9 and match[0] < 1.0:
+            #     token_i, annot_i = extract09Annotation(source, target, match)
 
     assert len(token) == len(annot)
-    return token, annot
+    assert len(token_i) == len(annot_i)
+
+    if annot or annot_i:
+        if annot:
+            return token, annot
+        if annot_i:
+            return token, annot_i
+    elif annot and annot_i:
+        annot_added = list( map(add, annot, annot_i) )
+        return token, annot_added
 
 # Collects annotations for all the sentences in the target and returns them
 def align_highconf_longtarget(target, source):
@@ -100,12 +86,16 @@ def align_highconf_longtarget(target, source):
             matches = fullMatchScore(s, source, target)
             match_scores = [item[0] for item in matches ]
 
-            if 1.0 in match_scores:
+            if 1.0 in match_scores or True in list(all(i >= 0.9 and i < 1.0 for i in match_scores)):
                 for match in matches:
-                    if match[0] == 1.0:                     
-                        token_i, annot_i = extractAnnotation(source, eachSentence, match)
+                    if match[0] == 1.0:         
+                        token_i, annot_i = extract1Annotation(source, eachSentence, match)
                         annot.extend( annot_i )
                         token.extend( token_i )
+                    # if match[0] >= 0.9 and match[0] < 1.0:
+                    #     token_i, annot_i = extract09Annotation(source, eachSentence, match)
+                    #     annot.extend( annot_i )
+                    #     token.extend( token_i )
                 
             if annot:
                 token_annot = [token, annot, [eachTuple[1]  for eachTuple in nltk.pos_tag_sents([token])[0]]]
@@ -135,13 +125,16 @@ def align_highconf_longtarget_negSent(target, source):
             matches = fullMatchScore(s, source, target)
             match_scores = [item[0] for item in matches ]
 
-            if 1.0 in match_scores:
+            if 1.0 in match_scores or True in list(all(i >= 0.9 and i < 1.0 for i in match_scores)):
                 for match in matches:
-                    if match[0] == 1.0:                     
-                        token_i, annot_i = extractAnnotation(source, eachSentence, match)
+                    if match[0] == 1.0:         
+                        token_i, annot_i = extract1Annotation(source, eachSentence, match)
                         annot.extend( annot_i )
                         token.extend( token_i )
-                        # print('MATCH 1 sentence' + str(i))
+                    # if match[0] >= 0.9 and match[0] < 1.0:
+                    #     token_i, annot_i = extract09Annotation(source, eachSentence, match)
+                    #     annot.extend( annot_i )
+                    #     token.extend( token_i )
 
             if annot:
                 token_annot = [token, annot, [eachTuple[1]  for eachTuple in nltk.pos_tag_sents([token])[0]]]
@@ -149,7 +142,6 @@ def align_highconf_longtarget_negSent(target, source):
                 collect_annotations[str(i)] = token_annot
 
             if 1.0 not in match_scores and all( list(all(i <= 0.20 for i in match_scores)) ): # very negative sentences (possibility of false negative candidates)
-                # print('VERY NEGATIVE sentence' + str(i))
                 tokenized_negative_sentence_i = eachSentence.split(' ')
                 annotation_negative_sentence_i = [0] * len(tokenized_negative_sentence_i)
                 annot.extend( annotation_negative_sentence_i )
