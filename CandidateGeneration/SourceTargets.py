@@ -135,13 +135,16 @@ results_gen = helpers.scan(
 match_scores = []
 intervention_types = []
 
-intervention_names_mapped = []
-intervention_class_mapped = []
-
 intervention_names = []
 intervention_classes = []
 
-res = es.search(index="ctofull-index", body={"query": {"match_all": {}}}, size=1000)
+intervention_names_mapped = []
+intervention_class_mapped = []
+
+intervention_names_unmapped = []
+intervention_class_unmapped = []
+
+res = es.search(index="ctofull-index", body={"query": {"match_all": {}}}, size=10000)
 print('Total number of records retrieved: ', res['hits']['total']['value'])
 # for hit in results_gen: # XXX: Entire CTO
 for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search results from the CTO
@@ -329,6 +332,12 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
                     intervention_names_mapped.append( interventionName )
                     if interventionType:
                         intervention_class_mapped.append( interventionType )
+                else:
+                    # if the term didnt map anywhere
+                    intervention_names_unmapped.append( interventionName )
+                    if interventionType:
+                        intervention_class_unmapped.append( interventionType )
+
 
                 # The main intervention term is tackled. Now tackle the intervention synonyms...
                 #####################################################################################
@@ -436,6 +445,11 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
                             intervention_names_mapped.append( eachInterventionOtherName )
                             if interventionType:
                                 intervention_class_mapped.append( interventionType )
+                        else:
+                            # if the term didnt map anywhere
+                            intervention_names_unmapped.append( eachInterventionOtherName )
+                            if interventionType:
+                                intervention_class_unmapped.append( interventionType )
                         
 
                         # Add to the "write_intervention" here
@@ -508,10 +522,9 @@ print(class_dist)
 df = getDistribution(class_dist, intervention_classes)
 
 import plotly.express as px
-fig = px.pie(df, values='sizes', names='labels', title='Distribution of Intervention types retrieved')
+fig = px.pie(df, values='sizes', names='labels', title='Distribution of Intervention classes retrieved')
 fig.show()
-
-
+#########################################################################################################################
 print( 'Total number of source interventions mapped to the target: ', len(intervention_names_mapped) )
 print( 'Total number of source interventions mapped to the target (unique): ', len(set(intervention_names_mapped)) )
 print( 'Total number of source intervention classes mapped to the target: ', len(intervention_class_mapped) )
@@ -520,3 +533,20 @@ print( 'Total number of source intervention classes mapped to the target: ', len
 class_dist_mapped = Counter(intervention_class_mapped)
 print(class_dist_mapped)
 df_mapped = getDistribution(class_dist_mapped, intervention_class_mapped)
+
+import plotly.express as px
+fig = px.pie(df_mapped, values='sizes', names='labels', title='Distribution of Intervention classes mapped')
+fig.show()
+#########################################################################################################################
+print( 'Total number of source interventions unmapped to the target: ', len(intervention_names_unmapped) )
+print( 'Total number of source interventions unmapped to the target (unique): ', len(set(intervention_names_unmapped)) )
+print( 'Total number of source intervention classes unmapped to the target: ', len(intervention_class_unmapped) )
+
+
+class_dist_unmapped = Counter(intervention_class_unmapped)
+print(class_dist_unmapped)
+df_unmapped = getDistribution(class_dist_unmapped, intervention_class_unmapped)
+
+import plotly.express as px
+fig = px.pie(df_unmapped, values='sizes', names='labels', title='Distribution of Intervention classes unmapped')
+fig.show()
