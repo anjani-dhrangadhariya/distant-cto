@@ -24,6 +24,7 @@ from collections import Counter
 from collections import defaultdict
 import collections
 import numpy as np
+import pandas as pd
 
 import matplotlib
 matplotlib.use('agg')
@@ -54,11 +55,6 @@ negative_sents = True
 ################################################################################
 # Local functions
 ################################################################################
-# Partitiion a list
-# def partition(list_in, n):
-#     # random.shuffle(list_in)
-#     return [list_in[i::n] for i in range(n)]
-
 def partition(lst, n):
     """Return successive n-sized chunks from list (lst)."""
     chunks = []
@@ -117,7 +113,7 @@ def pos_neg_trail(aggregated_dictionary):
     if bool(mergedChunks_dictionary) == True:
         return mergedChunks_dictionary
 
-file_write_trial = '/mnt/nas2/data/systematicReview/clinical_trials_gov/Weak_PICO/intervention_data_preprocessed/' + 'extraction1_pos_posnegtrail.txt'
+file_write_trial = '/mnt/nas2/data/systematicReview/clinical_trials_gov/Weak_PICO/intervention_data_preprocessed/conf_09/' + 'extraction1_pos_posnegtrail.txt'
 
 ################################################################################
 # Instantiate ElasticSearch
@@ -139,10 +135,16 @@ results_gen = helpers.scan(
 match_scores = []
 intervention_types = []
 
-res = es.search(index="ctofull-index", body={"query": {"match_all": {}}}, size=100)
+intervention_names_mapped = []
+intervention_class_mapped = []
+
+intervention_names = []
+intervention_classes = []
+
+res = es.search(index="ctofull-index", body={"query": {"match_all": {}}}, size=1000)
 print('Total number of records retrieved: ', res['hits']['total']['value'])
-for hit in results_gen: # XXX: Entire CTO
-# for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search results from the CTO
+# for hit in results_gen: # XXX: Entire CTO
+for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search results from the CTO
 
     write_hit = collections.defaultdict(dict) # final dictionary to write to the file...
 
@@ -212,7 +214,6 @@ for hit in results_gen: # XXX: Entire CTO
             # Intervention type 
             interventionType = eachInterventionSource['interventiontype']
             write_intervention['intervention_type'] = interventionType
-            intervention_types.append(interventionType)
 
             # Source 1.1: Intervention Name
             if 'interventionname' in eachInterventionSource:
@@ -235,6 +236,9 @@ for hit in results_gen: # XXX: Entire CTO
                 interventionDescription = None
 
             if interventionName is not None:
+
+                intervention_names.append(interventionName)
+                intervention_classes.append(interventionType)
 
                 ####################################annotations​##################################################
                 # Candidate Generation 1: Only Intervention names
@@ -320,6 +324,12 @@ for hit in results_gen: # XXX: Entire CTO
                         write_intervention['detailed_description_annot'].append(detailedDescriptionTarget_annot)
                         agrregateannot_detailedDescription.append( detailedDescriptionTarget_annot )
 
+
+                if officialTitleTarget_annot or briefTitleTarget or interventionDescription_annot or briefSummaryTarget_annot or detailedDescriptionTarget_annot:
+                    intervention_names_mapped.append( interventionName )
+                    if interventionType:
+                        intervention_class_mapped.append( interventionType )
+
                 # The main intervention term is tackled. Now tackle the intervention synonyms...
                 #####################################################################################
                 #  Candidate Generation 2: Intervention other names
@@ -335,6 +345,10 @@ for hit in results_gen: # XXX: Entire CTO
                     for i, eachInterventionOtherName in enumerate(interventionSynonyms):
 
                         write_intervention_syn['synonym_name'] = eachInterventionOtherName
+
+                        intervention_names.append(eachInterventionOtherName)
+                        # For each intervention synonym added to the list, add its class too
+                        intervention_classes.append(interventionType)
 
                         ######################################################################################
                         # Match the source intervention to the official title
@@ -417,6 +431,11 @@ for hit in results_gen: # XXX: Entire CTO
                                     agrregateannot_detailedDescription.append( detailedDescriptionTarget_synannot )
                                     # tempAnnot = write_intervention['detailed_description_annot']
                                     # agrregateannot_detailedDescription.append(tempAnnot)
+
+                        if officialTitleTarget_synannot or briefTitleTarget_synannot or interventionDescription_synannot or briefSummaryTarget_synannot or detailedDescriptionTarget_synannot:
+                            intervention_names_mapped.append( eachInterventionOtherName )
+                            if interventionType:
+                                intervention_class_mapped.append( interventionType )
                         
 
                         # Add to the "write_intervention" here
@@ -466,3 +485,38 @@ for hit in results_gen: # XXX: Entire CTO
     except:
         logNCTID = 'Caused exception at the NCT ID: ' + NCT_id
         logging.info(logNCTID)
+
+
+def getDistribution(class_dist, intervention_classes):
+    labels = []
+    sizes = []
+    for eachIn in class_dist.most_common():
+        percent = (eachIn[1]/ len(intervention_classes)) * 100
+        labels.append( eachIn[0] )
+        sizes.append( percent )
+
+    df = pd.DataFrame(list(zip(labels, sizes)), columns =['labels', 'sizes'])
+
+    return df
+
+print( 'Total number of interventions retrieved from the source: ', len(intervention_names) )
+print( 'Total number of interventions retrieved from the source (unique): ', len(set(intervention_names)) )
+print( 'Total number of intervention classes retrieved from the source: ', len(intervention_classes) )
+
+class_dist = Counter(intervention_classes)
+print(class_dist)
+df = getDistribution(class_dist, intervention_classes)
+
+import plotly.express as px
+fig = px.pie(df, values='sizes', names='labels', title='Distribution of Intervention types retrieved')
+fig.show()
+
+
+print( 'Total number of source interventions mapped to the target: ', len(intervention_names_mapped) )
+print( 'Total number of source interventions mapped to the target (unique): ', len(set(intervention_names_mapped)) )
+print( 'Total number of source intervention classes mapped to the target: ', len(intervention_class_mapped) )
+
+
+class_dist_mapped = Counter(intervention_class_mapped)
+print(class_dist_mapped)
+df_mapped = getDistribution(class_dist_mapped, intervention_class_mapped)
