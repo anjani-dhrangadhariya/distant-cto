@@ -62,17 +62,9 @@ class BERTCRF(nn.Module):
                 p.requires_grad = False
 
         self.tokenizer = tokenizer
-        self.device = device
-        self.bidirectional = bidirectional
-
-        # lstm layer
-        self.lstm_layer = nn.LSTM(input_size=768, hidden_size = 512, num_layers = 1, bidirectional=bidirectional, batch_first=True)
 
         # log reg
-        if bidirectional == True:
-            self.hidden2tag = nn.Linear(1024, 2)
-        else:
-            self.hidden2tag = nn.Linear(512, 2)
+        self.hidden2tag = nn.Linear(768, 2)
 
         # crf
         self.crf_layer = CRF(2, batch_first=True)
@@ -89,42 +81,30 @@ class BERTCRF(nn.Module):
         # output 0 = batch size 6, tokens 512, each token dimension 768 [CLS] token
         # output 1 = batch size 6, each token dimension 768
         # output 2 = layers 13, batch 6 (hidden states), tokens 512, each token dimension 768
-        sequence_output = outputs[2] # Last layer of each token prediction
-
-        num_layer_sum = 4
-        summed_last_4_layers = torch.stack(sequence_output[:num_layer_sum]).mean(0)
-
-        # lstm with masks (same as attention masks)
-        packed_input, perm_idx, seq_lengths = get_packed_padded_output(summed_last_4_layers, input_ids, attention_mask, self.tokenizer)
-        packed_output, (ht, ct) = self.lstm_layer(packed_input)
-
-        # Unpack and reorder the output
-        output, input_sizes = pad_packed_sequence(packed_output, batch_first=True)
-        _, unperm_idx = perm_idx.sort(0)
-        lstm_output = output[unperm_idx] # lstm_output.shape = shorter than the padded torch.Size([6, 388, 512])
-        seq_lengths_ordered = seq_lengths[unperm_idx]
+        sequence_output = outputs[0] 
         
-        # shorten the labels as per the batchsize
-        labels = labels[:, :lstm_output.shape[1]]
-
-        # mask the unimportant tokens before log_reg (NOTE: CLS token (position 0) is not masked!!!)
+        # mask the unimportant tokens before log_reg
         mask = (
-            (input_ids[:, :lstm_output.shape[1]] != self.tokenizer.pad_token_id)
-            & (input_ids[:, :lstm_output.shape[1]] != self.tokenizer.convert_tokens_to_ids(self.tokenizer.sep_token))
+            (input_ids != self.tokenizer.pad_token_id)
+            & (input_ids != self.tokenizer.convert_tokens_to_ids(self.tokenizer.sep_token))
             & (labels != 100)
         )
-
-        mask_expanded = mask.unsqueeze(-1).expand(lstm_output.size())
-        lstm_output *= mask_expanded.float()
+        mask_expanded = mask.unsqueeze(-1).expand(sequence_output.size())
+        sequence_output *= mask_expanded.float()
         labels *= mask.long()
 
         # log reg
-        probablities = F.relu ( self.hidden2tag( lstm_output ) )
+        probablities = F.relu ( self.hidden2tag( sequence_output ) )
 
         # CRF emissions
-        loss = self.crf_layer(probablities, labels, reduction='token_mean')
+        loss = self.crf_layer(probablities, labels, reduction='token_mean', mask = None)
 
-        emissions_ = self.crf_layer.decode( probablities )
+        emissions_ = self.crf_layer.decode( probablities , mask = None)
         emissions = [item for sublist in emissions_ for item in sublist] # flatten the nest list of emissions
 
-        return loss, torch.Tensor(emissions_), labels, mask
+        target_emissions = torch.zeros(probablities.shape[0], probablities.shape[1])
+        target_emissions = target_emissions.cuda()
+        for eachIndex in range( target_emissions.shape[0] ):
+            target_emissions[ eachIndex, :torch.tensor( emissions_[eachIndex] ).shape[0] ] = torch.tensor( emissions_[eachIndex] )
+        
+        return loss, target_emissions, labels, mask
