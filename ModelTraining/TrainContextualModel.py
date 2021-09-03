@@ -22,6 +22,8 @@ import datetime as dt
 import time
 from collections import OrderedDict
 
+# Memory leak
+import gc
 
 # statistics
 import statistics
@@ -55,6 +57,7 @@ from tqdm import tqdm
 import seaborn as sn
 import pandas as pd
 import matplotlib.pyplot as plt
+from sklearn.metrics import plot_confusion_matrix
 from tensorboardX import SummaryWriter
 
 from ReadCandidateData import *
@@ -70,15 +73,6 @@ n_gpu = torch.cuda.device_count()
 print('Number of GPUs identified: ', n_gpu)
 print('You are using ', torch.cuda.get_device_name(0), ' : ', device , ' device')
 # print('You are using ', torch.cuda.get_device_name(1), ' : ', device , ' device')
-
-##################################################################################
-# set all the seed values
-##################################################################################
-seed_val = 42
-random.seed(seed_val)
-np.random.seed(seed_val)
-torch.manual_seed(seed_val)
-torch.cuda.manual_seed_all(seed_val)
 
 ##################################################################################
 # Helper functions
@@ -192,7 +186,7 @@ def evaluate(defModel, optimizer, scheduler, development_dataloader, args, exp_a
 
         # confusion_matrix and plot
         labels = [1,0]
-        cm = confusion_matrix(all_GT_flat, all_pred_flat, labels)
+        cm = confusion_matrix(all_GT_flat, all_pred_flat, labels, normalize='true')
 
     return val_cr, all_pred_flat, all_GT_flat, cm, all_tokens_flat
 
@@ -203,15 +197,11 @@ def train(defModel, optimizer, scheduler, train_dataloader, development_dataload
     with torch.enable_grad():
         best_meanf1 = 0.0
         for epoch_i in range(0, args.max_eps):
-
+        
             # Accumulate loss over an epoch
             total_train_loss = 0
 
             # (coarse-grained) accumulate predictions and labels over the epoch
-            train_epoch_logits_coarse = []
-            train_epoch_masks_coarse = []
-            train_epochs_labels_coarse = []
-
             train_epoch_logits_coarse_i = []
             train_epochs_labels_coarse_i = []
 
@@ -255,10 +245,6 @@ def train(defModel, optimizer, scheduler, train_dataloader, development_dataload
 
                 for i in range(0, b_labels.shape[0]):
 
-                    train_epoch_masks_coarse.extend( b_mask[i, ] )
-                    train_epochs_labels_coarse.extend( b_labels[i, ] )
-                    train_epoch_logits_coarse.extend( b_output[i, ] )
-
                     selected_preds_coarse = torch.masked_select( b_output[i, ].to(f'cuda:{model.device_ids[0]}'), b_mask[i, ])
                     selected_labs_coarse = torch.masked_select(b_labels[i, ].to(f'cuda:{model.device_ids[0]}'), b_mask[i, ])
 
@@ -278,25 +264,16 @@ def train(defModel, optimizer, scheduler, train_dataloader, development_dataload
             avg_train_loss = total_train_loss / len(train_dataloader)
             # writer.add_scalar('loss-train', avg_train_loss, epoch_i)
 
-            # stack the list of tensors into a tensor
-            all_masks_tens = torch.stack(( train_epoch_masks_coarse ))
-            all_GT_tens =  torch.stack(( train_epochs_labels_coarse ))
-            all_preds_tens = torch.stack(( train_epoch_logits_coarse ))
-
-            # mask the tensors
-            selected_preds_coarse = torch.masked_select( all_preds_tens.to(f'cuda:{model.device_ids[0]}'), all_masks_tens )
-            selected_labs_coarse = torch.masked_select( all_GT_tens.to(f'cuda:{model.device_ids[0]}'), all_masks_tens )
-
-            # flatten
-            all_pred_flat = np.asarray(selected_preds_coarse.cpu(), dtype=np.float32).flatten()
-            all_GT_flat = np.asarray(selected_labs_coarse.cpu(), dtype=np.float32).flatten()
-
-            train_cr = classification_report(y_pred= all_pred_flat, y_true=all_GT_flat, labels= list(range(2)), output_dict=True) 
+            train_cr = classification_report(y_pred= train_epoch_logits_coarse_i, y_true=train_epochs_labels_coarse_i, labels= list(range(2)), output_dict=True) 
             # meanF1_2 = train_cr['2']['f1-score']
             meanF1_1 = train_cr['1']['f1-score']
             meanF1_0 = train_cr['0']['f1-score']
             mean_1 = (meanF1_1 + meanF1_0) / 2
             # writer.add_scalar('f1-train', meanF1_1  , epoch_i)
+            
+            # Delete the collected logits and labels
+            del train_epoch_logits_coarse_i, train_epochs_labels_coarse_i
+            gc.collect()
 
             # Validation 
             val_cr, all_pred_flat_coarse, all_GT_flat_coarse, cm, all_tokens_flat = evaluate(defModel, optimizer, scheduler, development_dataloader, args, exp_args, epoch_i)
@@ -310,7 +287,7 @@ def train(defModel, optimizer, scheduler, train_dataloader, development_dataload
 
             if val_meanF1_1 > best_meanf1:
                 print("Best validation mean F1 improved from {} to {} ...".format( best_meanf1, val_meanF1_1 ))
-                model_name_here = '/mnt/nas2/results/Results/systematicReview/Distant_CTO/models/intervention/experiment/' + str(eachSeed) + '/bert_bilstm_crf_epoch_' + str(epoch_i) + '_best_model.pth'
+                model_name_here = '/mnt/nas2/results/Results/systematicReview/Distant_CTO/models/intervention/0_EBM_baseline5/' + str(eachSeed) + '/bert_bilstm_crf_epoch_' + str(epoch_i) + '_best_model.pth'
                 print('Saving the best model for epoch {} with mean F1 score of {} '.format(epoch_i, val_meanF1_1 )) 
                 torch.save(defModel.state_dict(), model_name_here)
                 saved_models.append(model_name_here)                     
@@ -324,8 +301,6 @@ saved_models = []
 
 if __name__ == "__main__":
 
-    # for eachSeed in [ 0, 1, 42, 1234, 10, 123, 2, 5, 12, 12345 ]:
-    # for eachSeed in [ 0, 1 ]:
     for eachSeed in [ 0 ]:
 
         def seed_everything( seed ):
@@ -343,44 +318,53 @@ if __name__ == "__main__":
         # annotations = week, annotations_testdf_ = EBNLP_training, annotations_test1df_ = EBMNLP_test, annotations_test2df_ = hilfiker
         annotations, annotations_testdf_, annotations_test1df_, annotations_test2df_, exp_args = FetchTrainingCandidates()
 
-        # Combine the training (annotations) and development (annotations_testdf_) dataframes, shuffle them and divide into training and validation sets
+        # Combine the training (annotations) and development (annotations_testdf_) dataframes
         if exp_args.train_data == 'combined':
             fulldf = annotations.append(annotations_testdf_, ignore_index=True)
         elif exp_args.train_data == 'distant-cto': 
             fulldf = annotations
+        elif exp_args.train_data == 'ebm': 
+            fulldf = annotations_testdf_
 
+        # shuffle the dataset and divide into training and validation sets
         fulldf = fulldf.sample(frac=1).reset_index(drop=True)
         annotations, annotations_testdf_ = train_test_split(fulldf, test_size=0.2) 
         print('Size of training set: ', len(annotations.index))
         print('Size of development set: ', len(annotations_testdf_.index))
-
+        
+        del fulldf
+        gc.collect()
         # ----------------------------------------------------------------------------------------
         # Load the data into tensors
         # ----------------------------------------------------------------------------------------
         # Convert all inputs, labels, and attentions into torch tensors, the required datatype: torch.int64
-        train_input_ids = torch.tensor(torch.from_numpy( np.array( list(annotations['embeddings']), dtype=np.float32) ), dtype=torch.int64)                    
-        train_input_labels = torch.tensor(torch.from_numpy( np.array( list(annotations['label_pads']), dtype=np.int64) ), dtype=torch.int64)
-        train_attn_masks = torch.tensor(torch.from_numpy( np.array( list(annotations['attn_masks']), dtype=np.int64) ), dtype=torch.bool)
-        train_pos_tags = torch.nn.functional.one_hot( torch.tensor( torch.from_numpy( np.array( list(annotations['inputpos']), dtype=np.int64) ), dtype=torch.int64) )
+        train_input_ids = torch.from_numpy( np.array( list(annotations['embeddings']), dtype=np.int64 )).clone().detach()
+        train_input_labels = torch.from_numpy( np.array( list(annotations['label_pads']), dtype=np.int64) ).clone().detach()
+        train_attn_masks = torch.from_numpy( np.array( list(annotations['attn_masks']), dtype=np.int64) ).clone().detach()
+        train_pos_tags = torch.nn.functional.one_hot( torch.from_numpy( np.array( list(annotations['inputpos']), dtype=np.int64) ).clone().detach() )
 
         # Test set (EBM-NLP training data used as test set)
-        test_input_ids = torch.tensor(torch.from_numpy( np.array( list(annotations_testdf_['embeddings']), dtype=np.float32) ), dtype=torch.int64)                    
-        test_input_labels = torch.tensor(torch.from_numpy( np.array( list(annotations_testdf_['label_pads']), dtype=np.int64) ), dtype=torch.int64)
-        test_attn_masks = torch.tensor(torch.from_numpy( np.array( list(annotations_testdf_['attn_masks']), dtype=np.int64) ), dtype=torch.bool)
-        test_pos_tags = torch.nn.functional.one_hot( torch.tensor( torch.from_numpy( np.array( list(annotations_testdf_['inputpos']), dtype=np.int64) ), dtype=torch.int64) )
+        test_input_ids = torch.from_numpy( np.array( list(annotations_testdf_['embeddings']), dtype=np.int64) ).clone().detach()
+        test_input_labels = torch.from_numpy( np.array( list(annotations_testdf_['label_pads']), dtype=np.int64) ).clone().detach()
+        test_attn_masks = torch.from_numpy( np.array( list(annotations_testdf_['attn_masks']), dtype=np.int64) ).clone().detach()
+        test_pos_tags = torch.nn.functional.one_hot( torch.from_numpy( np.array( list(annotations_testdf_['inputpos']), dtype=np.int64) ).clone().detach() )
 
         # Test set 1 (EBM-NLP test gold data test set)
-        test1_input_ids = torch.tensor(torch.from_numpy( np.array( list(annotations_test1df_['embeddings']), dtype=np.float32) ), dtype=torch.int64)                    
-        test1_input_labels = torch.tensor(torch.from_numpy( np.array( list(annotations_test1df_['label_pads']), dtype=np.int64) ), dtype=torch.int64)
-        test1_attn_masks = torch.tensor(torch.from_numpy( np.array( list(annotations_test1df_['attn_masks']), dtype=np.int64) ), dtype=torch.bool)
-        test1_pos_tags = torch.nn.functional.one_hot( torch.tensor( torch.from_numpy( np.array( list(annotations_test1df_['inputpos']), dtype=np.int64) ), dtype=torch.int64) )
+        test1_input_ids = torch.from_numpy( np.array( list(annotations_test1df_['embeddings']), dtype=np.int64) ).clone().detach() 
+        test1_input_labels = torch.from_numpy( np.array( list(annotations_test1df_['label_pads']), dtype=np.int64) ).clone().detach() 
+        test1_attn_masks = torch.from_numpy( np.array( list(annotations_test1df_['attn_masks']), dtype=np.int64) ).clone().detach()
+        test1_pos_tags = torch.nn.functional.one_hot( torch.from_numpy( np.array( list(annotations_test1df_['inputpos']), dtype=np.int64) ).clone().detach() )
 
         # Test set 2 (Hilfiker test set)
-        test2_input_ids = torch.tensor(torch.from_numpy( np.array( list(annotations_test2df_['embeddings']), dtype=np.float32) ), dtype=torch.int64)                    
-        test2_input_labels = torch.tensor(torch.from_numpy( np.array( list(annotations_test2df_['label_pads']), dtype=np.int64) ), dtype=torch.int64)
-        test2_attn_masks = torch.tensor(torch.from_numpy( np.array( list(annotations_test2df_['attn_masks']), dtype=np.int64) ), dtype=torch.bool)            
-        test2_pos_tags = torch.nn.functional.one_hot( torch.tensor( torch.from_numpy( np.array( list(annotations_test2df_['inputpos']), dtype=np.int64) ), dtype=torch.int64) )
+        test2_input_ids = torch.from_numpy( np.array( list(annotations_test2df_['embeddings']), dtype=np.int64) ).clone().detach()                     
+        test2_input_labels = torch.from_numpy( np.array( list(annotations_test2df_['label_pads']), dtype=np.int64) ).clone().detach()
+        test2_attn_masks = torch.from_numpy( np.array( list(annotations_test2df_['attn_masks']), dtype=np.int64) ).clone().detach()           
+        test2_pos_tags = torch.nn.functional.one_hot( torch.from_numpy( np.array( list(annotations_test2df_['inputpos']), dtype=np.int64) ).clone().detach() )
         print('Inputs converted to tensors...')
+
+        # Delete the large dataframes here
+        del annotations, annotations_testdf_, annotations_test1df_, annotations_test2df_
+        gc.collect()
 
         # ----------------------------------------------------------------------------------------
         # Create dataloaders from the tensors
@@ -389,6 +373,9 @@ if __name__ == "__main__":
         train_data = TensorDataset(train_input_ids, train_input_labels, train_attn_masks, train_pos_tags)
         train_sampler = RandomSampler(train_data)
         train_dataloader = DataLoader(train_data, sampler=None, batch_size=10, shuffle=False)
+
+        del train_input_ids, train_input_labels, train_attn_masks, train_pos_tags, train_sampler
+        gc.collect()
 
         # Create the DataLoader for our development set. XXX Do not pass this internal training set dataloader for another experiment
         # dev_data = TensorDataset(dev_input_ids, dev_input_labels, dev_attn_masks)
@@ -400,15 +387,24 @@ if __name__ == "__main__":
         test_sampler = RandomSampler(test_data)
         test_dataloader = DataLoader(test_data, sampler=None, batch_size=6, shuffle=False)
 
+        del test_input_ids, test_input_labels, test_attn_masks, test_pos_tags, test_sampler
+        gc.collect()
+
         # Create the DataLoader for our test set 1.
         test1_data = TensorDataset(test1_input_ids, test1_input_labels, test1_attn_masks, test1_pos_tags)
         test1_sampler = RandomSampler(test1_data)
         test1_dataloader = DataLoader(test1_data, sampler=None, batch_size=6, shuffle=False)
 
+        del test1_input_ids, test1_input_labels, test1_attn_masks, test1_pos_tags, test1_sampler
+        gc.collect()
+
         # Create the DataLoader for our test set 2.
         test2_data = TensorDataset(test2_input_ids, test2_input_labels, test2_attn_masks, test2_pos_tags)
         test2_sampler = RandomSampler(test2_data)
         test2_dataloader = DataLoader(test2_data, sampler=None, batch_size=6, shuffle=False)
+
+        del test2_input_ids, test2_input_labels, test2_attn_masks, test2_pos_tags, test2_sampler
+        gc.collect()
 
         print('\n--------------------------------------------------------------------------------------------')
         print('Data loaders created')
@@ -425,7 +421,6 @@ if __name__ == "__main__":
         parser.add_argument('-lr', type = float, default= 5e-4)
         parser.add_argument('-eps', type = float, default= 1e-8)
         parser.add_argument('-loss', type = str, default = 'general')
-        # parser.add_argument('-fold', type = str, default=fold)
         parser.add_argument('-bidrec', type = str, default=True)
         args = parser.parse_args()
 
@@ -453,7 +448,8 @@ if __name__ == "__main__":
             model.to(f'cuda:{model.device_ids[0]}')
         elif exp_args.parallel == 'false':
             model = nn.DataParallel(model, device_ids = [0])
-            #model.to(f'cuda:{model.device_ids[0]}') 
+            # model.to(f'cuda:{model.device_ids[0]}')
+            # model.cuda()
 
         print("Done in {} seconds".format(time.time() - st))
 
@@ -480,18 +476,27 @@ if __name__ == "__main__":
         print('##################################################################################')
         print('Begin training...')
         print('##################################################################################')
-        train(model, optimizer, scheduler, train_dataloader, test_dataloader, args, exp_args, eachSeed)
+        # train(model, optimizer, scheduler, train_dataloader, test_dataloader, args, exp_args, eachSeed)
         # train(model, optimizer, scheduler, train_dataloader, development_dataloader, args, exp_args, eachSeed)
         print("Training and validation done in {} seconds".format(time.time() - st))
-
 
         print('##################################################################################')
         print('Begin test...')
         print('##################################################################################')
+        # Won't load models trained in evenfaster (version mismatch)....
         # checkpoint = torch.load(saved_models[-1], map_location='cuda:0')
-        checkpoint = torch.load('/mnt/nas2/results/Results/systematicReview/Distant_CTO/models/intervention/experiment/0/bert_bilstm_crf_epoch_9_best_model.pth', map_location='cuda:0')
+        checkpoint = torch.load('/mnt/nas2/results/Results/systematicReview/Distant_CTO/models/intervention/noEBMTrain_posnegtrail_SCIPOSAtten_crf/0/bert_bilstm_crf_epoch_2_best_model.pth', map_location='cuda:0')
+
         model.load_state_dict( checkpoint )
         model = torch.nn.DataParallel(model, device_ids=[0])
+
+        # new_state_dict = OrderedDict()
+        # for k, v in checkpoint.items():
+        #     name = k[7:] # remove `module.`
+        #     new_state_dict[name] = v
+        # # load params
+        # model.load_state_dict(new_state_dict)
+        # model = torch.nn.DataParallel(model, device_ids=[0])
 
         # # print('Applying the best model on test set (EBM-NLP training set used as test set)...')
         # # test_cr, all_pred_flat, all_GT_flat, cm = evaluate(model, optimizer, scheduler, test_dataloader, args, exp_args)
@@ -522,4 +527,3 @@ if __name__ == "__main__":
 
         # dataframe_set2 = pd.DataFrame( {'tokens': tokens_2, 'predictions': all_pred_flat.tolist(), 'ground truth': all_GT_flat.tolist()} )
         # dataframe_set2.to_csv('/mnt/nas2/results/Results/systematicReview/Distant_CTO/predictions/hilfiker.csv', sep='\t', encoding='utf-8')
-        
