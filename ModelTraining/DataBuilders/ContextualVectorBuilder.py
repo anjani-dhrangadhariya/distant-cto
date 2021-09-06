@@ -21,6 +21,8 @@ import logging
 import datetime as dt
 import time
 
+import gc
+
 # numpy essentials
 from numpy import asarray
 import numpy as np
@@ -42,7 +44,8 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from transformers import BertModel, BertTokenizer, BertConfig
 from transformers import RobertaConfig, RobertaModel
 from transformers import GPT2Model, GPT2Tokenizer, GPT2Config
-from transformers import AutoTokenizer, AutoModelForTokenClassification, AutoModel
+from transformers import AutoTokenizer 
+# from transformers import AutoTokenizer, AutoModelForTokenClassification, AutoModel
 from transformers import AdamW 
 from transformers import get_linear_schedule_with_warmup
 
@@ -162,7 +165,6 @@ def tokenize_and_preserve_labels(sentence, text_labels, pos, tokenizer, max_leng
 
     assert len(tokenized_sentence) == len(labels) == len(poss)
 
-
     # Truncate the sequences (sentence and label) to (max_length - 2)
     if max_length >= 510:
         truncated_sentence = truncateSentence(tokenized_sentence, (max_length - 2))
@@ -218,5 +220,9 @@ def get_contextual_vectors(annotations_df, vector_type, pos_encoder, MAX_LEN):
 
 
     tokens, labels, masks, poss = list(zip(*tokenized))
+
+    # Delete the tokenizer and tokenized list
+    del tokenizer, tokenized
+    gc.collect()
     
     return tokens, labels, masks, poss # Returns input IDs and labels together

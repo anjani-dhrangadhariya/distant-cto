@@ -14,7 +14,7 @@ def labelGenerator(raw_labels):
 
     return bio_labels
 
-def readEBMNLP_sentAnnot(EBMNLP_sentAnnot, label_type):
+def readEBMNLP_docAnnot(EBMNLP_docAnnot, label_type):
 
     print('Getting the sentence level annotations frm EBM-NLP....')
 
@@ -23,27 +23,23 @@ def readEBMNLP_sentAnnot(EBMNLP_sentAnnot, label_type):
     posList = []
     abstractIdentifiersList = []
     
-    with open(EBMNLP_sentAnnot, 'r', encoding='latin1') as rf:
+    with open(EBMNLP_docAnnot, 'r', encoding='latin1') as rf:
         for eachAbstract in rf:
             annot = json.loads(eachAbstract)
-            
             abstract_identifier = annot.keys()
             for eachKey in abstract_identifier:
+                
                 all_sentences = annot[eachKey]
 
-                for eachSentenceKey in all_sentences.keys():
+                tokens = all_sentences[0]
+                annotations = all_sentences[1]
+                if label_type == 'BIO':
+                    annotations = labelGenerator(annotations)
+                pos = all_sentences[2]
 
-                    assert len(all_sentences[eachSentenceKey][0]) == len(all_sentences[eachSentenceKey][1])
-
-                    tokens = all_sentences[eachSentenceKey][0]
-                    annotations = all_sentences[eachSentenceKey][1]
-                    if label_type == 'BIO':
-                        annotations = labelGenerator(annotations)
-                    pos = all_sentences[eachSentenceKey][2]
-
-                    tokenList.append( tokens )
-                    labelList.append( annotations )
-                    posList.append( pos )
+                tokenList.append( tokens )
+                labelList.append( annotations )
+                posList.append( pos )
 
     assert len(tokenList) == len(labelList)
     # Collate the lists into a dataframe
