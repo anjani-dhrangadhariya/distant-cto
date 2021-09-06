@@ -56,10 +56,10 @@ class SCIBERTCRF(nn.Module):
 
     def __init__(self, freeze_bert, tokenizer, device, bidirectional):
         super(SCIBERTCRF, self).__init__()
-        #Instantiating BERT model object 
+        #Instantiating SciBERT model object 
         self.scibert_layer = AutoModel.from_pretrained('allenai/scibert_scivocab_uncased')
         
-        #Freeze bert layers: if True, the freeze BERT weights
+        #Freeze SciBERT layers: if True, the freeze BERT weights
         if freeze_bert:
             for p in self.scibert_layer.parameters():
                 p.requires_grad = False
