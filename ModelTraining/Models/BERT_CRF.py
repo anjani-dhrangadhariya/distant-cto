@@ -97,9 +97,9 @@ class BERTCRF(nn.Module):
         probablities = F.relu ( self.hidden2tag( sequence_output ) )
 
         # CRF emissions
-        loss = self.crf_layer(probablities, labels, reduction='token_mean', mask = None)
+        loss = self.crf_layer(probablities, labels, reduction='token_mean', mask = mask)
 
-        emissions_ = self.crf_layer.decode( probablities , mask = None)
+        emissions_ = self.crf_layer.decode( probablities , mask = mask)
         emissions = [item for sublist in emissions_ for item in sublist] # flatten the nest list of emissions
 
         target_emissions = torch.zeros(probablities.shape[0], probablities.shape[1])
