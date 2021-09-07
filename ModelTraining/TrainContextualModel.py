@@ -65,6 +65,8 @@ from Models.semantic_crf import SemanticCRF
 from Models.ChooseModel import choose_model
 from Functions.ThresholdMoving import getRoc
 
+from pandas import DataFrame
+
 ##################################################################################
 # set up the GPU
 ##################################################################################
@@ -97,7 +99,7 @@ def to_labels(pos_probs, threshold):
 
 def getLogits(all_preds_tens):
     # get logits from predictions
-    max_probs = torch.max(all_preds_tens, dim=1) # get the highest of two probablities
+    max_probs = torch.max(all_preds_tens, dim=2) # get the highest of two probablities
     all_logits_tens = max_probs.indices.flatten()
     return all_logits_tens
 
@@ -107,6 +109,8 @@ def evaluate(defModel, optimizer, scheduler, development_dataloader, args, exp_a
     mean_loss = 0
     count = 0
     total_val_loss_coarse = 0
+
+    class_rep_temp = []
 
     with torch.no_grad() :
 
@@ -152,6 +156,14 @@ def evaluate(defModel, optimizer, scheduler, development_dataloader, args, exp_a
             mean_loss += abs( torch.mean(e_loss) ) 
 
             for i in range(0, e_labels.shape[0]):
+
+                # mask the probas
+                masked_preds = torch.masked_select( e_logits[i, ].to(f'cuda:0'), e_mask[i, ] )
+                # mask the labels
+                masked_labs = torch.masked_select( e_labels[i, ].to(f'cuda:0'), e_mask[i, ] )
+                temp_cr = classification_report(y_pred= masked_preds.cpu(), y_true=masked_labs.cpu(), labels=list(range(2)), output_dict=True) 
+                class_rep_temp.append(temp_cr['macro avg']['f1-score'])
+
                 all_masks.extend( e_mask[i, ] )
                 all_GT.extend( e_labels[i, ] )
                 all_predictions.extend( e_logits[i, ] )
@@ -186,9 +198,9 @@ def evaluate(defModel, optimizer, scheduler, development_dataloader, args, exp_a
 
         # confusion_matrix and plot
         labels = [1,0]
-        cm = confusion_matrix(all_GT_flat, all_pred_flat, labels, normalize='true')
+        cm = confusion_matrix(all_GT_flat, all_pred_flat, labels, normalize=None)
 
-    return val_cr, all_pred_flat, all_GT_flat, cm, all_tokens_flat
+    return val_cr, all_pred_flat, all_GT_flat, cm, all_tokens_flat, class_rep_temp
 
 
 # Train
@@ -245,7 +257,7 @@ def train(defModel, optimizer, scheduler, train_dataloader, development_dataload
 
                 for i in range(0, b_labels.shape[0]):
 
-                    selected_preds_coarse = torch.masked_select( b_output[i, ].to(f'cuda:{model.device_ids[0]}'), b_mask[i, ])
+                    selected_preds_coarse = torch.masked_select( b_logits[i, ].to(f'cuda:{model.device_ids[0]}'), b_mask[i, ])
                     selected_labs_coarse = torch.masked_select(b_labels[i, ].to(f'cuda:{model.device_ids[0]}'), b_mask[i, ])
 
                     train_epoch_logits_coarse_i.extend( selected_preds_coarse.to("cpu").numpy() )
@@ -287,7 +299,7 @@ def train(defModel, optimizer, scheduler, train_dataloader, development_dataload
 
             if val_meanF1_1 > best_meanf1:
                 print("Best validation mean F1 improved from {} to {} ...".format( best_meanf1, val_meanF1_1 ))
-                model_name_here = '/mnt/nas2/results/Results/systematicReview/Distant_CTO/models/intervention/0_EBM_baseline5/' + str(eachSeed) + '/bert_bilstm_crf_epoch_' + str(epoch_i) + '_best_model.pth'
+                model_name_here = '/mnt/nas2/results/Results/systematicReview/Distant_CTO/models/intervention/0_EBM_baseline7linear/' + str(eachSeed) + '/bert_bilstm_crf_epoch_' + str(epoch_i) + '_best_model.pth'
                 print('Saving the best model for epoch {} with mean F1 score of {} '.format(epoch_i, val_meanF1_1 )) 
                 torch.save(defModel.state_dict(), model_name_here)
                 saved_models.append(model_name_here)                     
@@ -301,7 +313,7 @@ saved_models = []
 
 if __name__ == "__main__":
 
-    for eachSeed in [ 0 ]:
+    for eachSeed in [ 1 ]:
 
         def seed_everything( seed ):
             random.seed(seed)
@@ -376,11 +388,6 @@ if __name__ == "__main__":
 
         del train_input_ids, train_input_labels, train_attn_masks, train_pos_tags, train_sampler
         gc.collect()
-
-        # Create the DataLoader for our development set. XXX Do not pass this internal training set dataloader for another experiment
-        # dev_data = TensorDataset(dev_input_ids, dev_input_labels, dev_attn_masks)
-        # dev_sampler = RandomSampler(dev_data)
-        # development_dataloader = DataLoader(dev_data, sampler=None, batch_size=10, shuffle=False)
 
         # Create the DataLoader for our test set. (This will be used as validation set!)
         test_data = TensorDataset(test_input_ids, test_input_labels, test_attn_masks, test_pos_tags)
@@ -477,35 +484,43 @@ if __name__ == "__main__":
         print('Begin training...')
         print('##################################################################################')
         # train(model, optimizer, scheduler, train_dataloader, test_dataloader, args, exp_args, eachSeed)
-        # train(model, optimizer, scheduler, train_dataloader, development_dataloader, args, exp_args, eachSeed)
         print("Training and validation done in {} seconds".format(time.time() - st))
 
         print('##################################################################################')
         print('Begin test...')
         print('##################################################################################')
-        # Won't load models trained in evenfaster (version mismatch)....
+        # Load the last saved BEST model
         # checkpoint = torch.load(saved_models[-1], map_location='cuda:0')
-        checkpoint = torch.load('/mnt/nas2/results/Results/systematicReview/Distant_CTO/models/intervention/noEBMTrain_posnegtrail_SCIPOSAtten_crf/0/bert_bilstm_crf_epoch_2_best_model.pth', map_location='cuda:0')
+        # or load a from some checkpoint
+        checkpoint = torch.load('/mnt/nas2/results/Results/systematicReview/Distant_CTO/models/intervention/0_EBM_baseline7masked/1/bert_bilstm_crf_epoch_7_best_model.pth', map_location='cuda:0')
 
+        # Load the checkpoint/state dict into the predefined model and parallelize
         model.load_state_dict( checkpoint )
-        model = torch.nn.DataParallel(model, device_ids=[0])
-
-        # new_state_dict = OrderedDict()
-        # for k, v in checkpoint.items():
-        #     name = k[7:] # remove `module.`
-        #     new_state_dict[name] = v
-        # # load params
-        # model.load_state_dict(new_state_dict)
-        # model = torch.nn.DataParallel(model, device_ids=[0])
+        if exp_args.parallel == 'true':
+            if torch.cuda.device_count() > 1:
+                model = nn.DataParallel(model, device_ids = [0, 1, 2, 3])
+            # model.to(f'cuda:{model.device_ids[0]}')
+        elif exp_args.parallel == 'false':
+            # model = nn.DataParallel(model, device_ids = [0])
+            model = torch.nn.DataParallel(model, device_ids=[0])
+            # model.to(f'cuda:{model.device_ids[0]}')
 
         # # print('Applying the best model on test set (EBM-NLP training set used as test set)...')
         # # test_cr, all_pred_flat, all_GT_flat, cm = evaluate(model, optimizer, scheduler, test_dataloader, args, exp_args)
         # # print(test_cr)
 
         print('Applying the best model on test set (EBM-NLP)...')
-        test1_cr, all_pred_flat, all_GT_flat, cm, test1_words = evaluate(model, optimizer, scheduler, test1_dataloader, args, exp_args)
+        test1_cr, all_pred_flat, all_GT_flat, cm, test1_words, class_report_temp = evaluate(model, optimizer, scheduler, test1_dataloader, args, exp_args)
         print(test1_cr)
         print(cm)
+
+        # # Write F1-scores for predictions on individual samples from the test datset for the t-test
+        # df = DataFrame(class_report_temp)
+        # with open('/home/anjani/distant-cto/ModelTraining/SignificanceTests/data/ebm/baseline.txt', 'a+') as writeFile:
+        #     for index, row in df.iterrows():
+        #         # print(str(row.values[0]))
+        #         writeFile.write(str(row.values[0]))
+        #         writeFile.write('\n')
 
         # tokens = []
         # for eachId in test1_words:
@@ -516,9 +531,17 @@ if __name__ == "__main__":
         # dataframe_set1.to_csv('/mnt/nas2/results/Results/systematicReview/Distant_CTO/predictions/ebm_test.csv', sep='\t', encoding='utf-8')
 
         print('Applying the best model on test set (Hilfiker et al.)...')
-        test2_cr, all_pred_flat, all_GT_flat, cm, test2_words = evaluate(model, optimizer, scheduler, test2_dataloader, args, exp_args)
+        test2_cr, all_pred_flat, all_GT_flat, cm, test2_words, class_report_temp = evaluate(model, optimizer, scheduler, test2_dataloader, args, exp_args)
         print(test2_cr)
         print(cm)
+
+        # # Write F1-scores for predictions on individual samples from the test datset for the t-test
+        # df = DataFrame(class_report_temp)
+        # with open('/home/anjani/distant-cto/ModelTraining/SignificanceTests/data/physio/baseline.txt', 'a+') as writeFile:
+        #     for index, row in df.iterrows():
+        #         # print(str(row.values[0]))
+        #         writeFile.write(str(row.values[0]))
+        #         writeFile.write('\n')
 
         # tokens_2 = []
         # for eachId in test2_words:

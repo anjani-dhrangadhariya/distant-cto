@@ -17,6 +17,8 @@ import random
 import sys, json, os
 import time
 
+import gc
+
 import pandas as pd
 import numpy as np
 
@@ -27,6 +29,7 @@ from DataBuilders.SemanticVectorBuilder import *
 from DataBuilders.ContextualVectorBuilder import *
 from DataBuilders.ValidationDataBuilder import *
 from DataBuilders.ValidationSentenceBuilder import *
+from DataBuilders.ValidationDocumentBuilder import *
 
 def flatten(l):
     flatList = []
@@ -116,26 +119,28 @@ def readRawCandidates( list_NCT, extraction_number, label_type=None ):
                     for eachKey, eachValue in annot['aggregate_annot']['brief_summary_annot'].items():
                         assert len(eachValue) == 3
                         raw_labels =  eachValue[1]
-                        if label_type == 'BIO':
-                            raw_labels = labelGenerator(raw_labels)
-                        tokens.append( eachValue[0] )
-                        labels.append( raw_labels )
-                        pos.append( eachValue[2] )
-                        length_examiner.append( len( eachValue[1] ) )
-                        nct_ids.append(id_)
+                        if all(v == 0 for v in raw_labels) == False:
+                            if label_type == 'BIO':
+                                raw_labels = labelGenerator(raw_labels)
+                            tokens.append( eachValue[0] )
+                            labels.append( raw_labels )
+                            pos.append( eachValue[2] )
+                            length_examiner.append( len( eachValue[1] ) )
+                            nct_ids.append(id_)
 
                 if 'detailed_description_annot' in annot['aggregate_annot'].keys():
                     # iterate the dictionary
                     for eachKey, eachValue in annot['aggregate_annot']['detailed_description_annot'].items():
                         assert len(eachValue) == 3
                         raw_labels =  eachValue[1]
-                        if label_type == 'BIO':
-                            raw_labels = labelGenerator(raw_labels)
-                        tokens.append( eachValue[0] )
-                        labels.append( raw_labels )
-                        pos.append( eachValue[2] )
-                        length_examiner.append( len( eachValue[1] ) )
-                        nct_ids.append(id_)
+                        if all(v == 0 for v in raw_labels) == False:
+                            if label_type == 'BIO':
+                                raw_labels = labelGenerator(raw_labels)
+                            tokens.append( eachValue[0] )
+                            labels.append( raw_labels )
+                            pos.append( eachValue[2] )
+                            length_examiner.append( len( eachValue[1] ) )
+                            nct_ids.append(id_)
 
                 # if 'intervention_description_annot' in annot['aggregate_annot'].keys():
                 #     # iterate the dictionary
@@ -156,23 +161,28 @@ def readRawCandidates( list_NCT, extraction_number, label_type=None ):
                     for eachKey, eachValue in annot['aggregate_annot']['intervention_description_annot'].items():
                         assert len(eachValue) == 3
                         raw_labels =  eachValue[1]
-                        if label_type == 'BIO':
-                            raw_labels = labelGenerator(raw_labels)
-                        tokens.append( eachValue[0] )
-                        labels.append( raw_labels )
-                        pos.append( eachValue[2] )
-                        length_examiner.append( len( eachValue[1] ) )
-                        nct_ids.append(id_)
+                        if all(v == 0 for v in raw_labels) == False:
+                            if label_type == 'BIO':
+                                raw_labels = labelGenerator(raw_labels)
+                            tokens.append( eachValue[0] )
+                            labels.append( raw_labels )
+                            pos.append( eachValue[2] )
+                            length_examiner.append( len( eachValue[1] ) )
+                            nct_ids.append(id_)
 
             counter_stop = counter_stop + 1
-            # if counter_stop == 50:
-            #     break
+            if counter_stop == 500:
+                break
 
     # Collate the lists into a dataframe
     # corpusDf = percentile_list = pd.DataFrame({'tokens': tokens,'labels': labels,'ids': nct_ids})
-    corpusDf = percentile_list = pd.DataFrame({'tokens': tokens,'labels': labels, 'pos': pos})
+    corpusDf = percentile_list = pd.DataFrame({'tokens': tokens,'labels': labels, 'pos': pos}) 
     
     df = corpusDf.sample(frac=1).reset_index(drop=True) # Shuffles the dataframe after creation
+    
+    # can delete this one (corpusDf)
+    del corpusDf
+    gc.collect() # mark if for garbage collection
 
     MAX_LEN = max(length_examiner)
 
@@ -186,12 +196,13 @@ def FetchTrainingCandidates():
 
     # List of arguments to set up experiment
     parser = argparse.ArgumentParser()
-    parser.add_argument('-embed', type = str, default = 'scibert') # word2vec, bio2vec2, bio2vec30, bert, gpt2, biobert, scibert
+    parser.add_argument('-embed', type = str, default = 'bert') # word2vec, bio2vec2, bio2vec30, bert, gpt2, biobert, scibert
     parser.add_argument('-embed_type', type = str, default = 'contextual') # semantic, contextual
-    parser.add_argument('-model', type = str, default = 'scibertposattenact') # bertcrf, scibertcrf, scibertposcrf, scibertposlinear, scibertposattenlinear, scibertposattencrf, scibertposattenact
+    parser.add_argument('-model', type = str, default = 'bertcrf') # semanticcrf, bertcrf, bertlinear, scibertcrf, scibertposcrf, scibertposlinear, scibertposattenlinear, scibertposattencrf, scibertposattenact
     parser.add_argument('-label_type', type = str, default = 'seq_lab') # seq_lab, BIO, BIOES
-    parser.add_argument('-text_level', type = str, default = 'sentence') # sentence, document
-    parser.add_argument('-train_data', type = str, default = 'distant-cto') # distant-cto, combined
+    parser.add_argument('-text_level', type = str, default = 'document') # sentence, document
+    parser.add_argument('-train_data', type = str, default = 'ebm') # distant-cto, combined, ebm
+    parser.add_argument('-parallel', type = str, default = 'false') # false = won't use data parallel
     args = parser.parse_args()
 
     print('Chosen embedding type is: ', args.embed)
@@ -205,49 +216,83 @@ def FetchTrainingCandidates():
     EBM_NLP_texts = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/ebm_nlp_2_00/documents/'
     # testDf, test1Df, test2Df = get_data_loaders(EBM_NLP_texts, args.label_type)
 
-    MAX_LEN = 100 # Check the average MAX_LEN of the annotations and sentences in the training and test sets
-
     # Validation and test data
     # convert tokens and labels into vectors
     if args.embed_type == 'semantic':
+        
+        MAX_LEN = 510 # Check the average MAX_LEN of the annotations and sentences in the training and test sets
         # Semantic vectors fetched 
         print('Extracting semantic embeddings from the text tokens...')
         embeddings, labels, attention_masks = get_semantic_vectors(annotations_df, args.embed, MAX_LEN)
 
     elif args.embed_type == 'contextual':
         print('Extracting contextual embeddings from the text tokens...')
+
         if args.text_level == 'document':
 
-            embeddings, labels, attention_masks = get_contextual_vectors(annotations_df, args.embed, MAX_LEN)
+            MAX_LEN = 510 # Check the average MAX_LEN of the annotations and sentences in the training and test sets
 
-            embeddings_test, labels_test, attention_masks_test = get_contextual_vectors(testDf, args.embed, 510)
-            embeddings_test1, labels_test1, attention_masks_test1 = get_contextual_vectors(test1Df, args.embed, 510)
-            embeddings_test2, labels_test2, attention_masks_test2 = get_contextual_vectors(test2Df, args.embed, 510)
+            EBM_NLP_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/doc_annot2POS.txt'
+            testDf = readEBMNLP_docAnnot(EBM_NLP_sentences, args.label_type)
 
+            # EBM_NLPgold_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/ebmnlpgold_doc_annot2POS.txt'
+            EBM_NLPgold_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/allSentence_annot/ebmnlpgold_sent_annot2POS_posnegtrail.txt'
+            test1Df = readEBMNLP_sentAnnot(EBM_NLPgold_sentences, args.label_type)
+            print('Loading EBM-NLP training and test sentences completed...')
+
+            # hilfiker_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/hilfiker_doc_annot2POS.txt'
+            hilfiker_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/allSentence_annot/hilfiker_sent_annot2POS_posnegtrail.txt'
+            test2Df = readEBMNLP_sentAnnot(hilfiker_sentences, args.label_type)
+            print('Loading in-house physiotherapy test sentences completed...')
+
+            fullPOS_ = flatten( annotations_df['pos'].values.tolist() )
+            fullPOS__ = flatten( testDf['pos'].values.tolist() )
+            fullPOS___ = flatten( test1Df['pos'].values.tolist() )
+            fullPOS____ = flatten( test1Df['pos'].values.tolist() )
+            fullPOS = fullPOS_ + fullPOS__ + fullPOS___ + fullPOS____
+            fullPOS = list(set(fullPOS))
+            pos_encoded = le_pos.fit_transform( fullPOS )
+
+            # print('executing for the weak corpus....')
+            embeddings, labels, attention_masks, input_pos = get_contextual_vectors(annotations_df, args.embed, le_pos, MAX_LEN)
+            # print('executing for the EBMNLP training corpus....')
+            embeddings_test, labels_test, attention_masks_test, input_pos_test  = get_contextual_vectors(testDf, args.embed, le_pos, MAX_LEN)
+            # print('executing for the EBMNLP test corpus....')
+            embeddings_test1, labels_test1, attention_masks_test1, input_pos_test1  = get_contextual_vectors(test1Df, args.embed, le_pos, MAX_LEN)
+            # print('executing for the hilfiker test corpus....')
+            embeddings_test2, labels_test2, attention_masks_test2, input_pos_test2  = get_contextual_vectors(test2Df, args.embed, le_pos, MAX_LEN)
             assert len(annotations_df['labels']) == len(embeddings)
             assert len(annotations_df['tokens']) == len(embeddings)
 
-            annotations_df_ = annotations_df.assign(embeddings = pd.Series(embeddings).values, label_pads = pd.Series(labels).values, attn_masks = pd.Series(attention_masks).values) # assign the padded embeddings to the dataframe
-            annotations_testdf_ = testDf.assign(embeddings = pd.Series(embeddings_test).values, label_pads = pd.Series(labels_test).values, attn_masks = pd.Series(attention_masks_test).values) # assign the padded embeddings to the dataframe
-            annotations_test1df_ = test1Df.assign(embeddings = pd.Series(embeddings_test1).values, label_pads = pd.Series(labels_test1).values, attn_masks = pd.Series(attention_masks_test1).values) # assign the padded embeddings to the dataframe
-            annotations_test2df_ = test2Df.assign(embeddings = pd.Series(embeddings_test2).values, label_pads = pd.Series(labels_test2).values, attn_masks = pd.Series(attention_masks_test2).values) # assign the padded embeddings to the dataframe
+            annotations_df_ = annotations_df.assign(embeddings = pd.Series(embeddings).values, label_pads = pd.Series(labels).values, attn_masks = pd.Series(attention_masks).values, inputpos = pd.Series(input_pos).values) # assign the padded embeddings to the dataframe
+            annotations_testdf_ = testDf.assign(embeddings = pd.Series(embeddings_test).values, label_pads = pd.Series(labels_test).values, attn_masks = pd.Series(attention_masks_test).values, inputpos = pd.Series(input_pos_test).values) # assign the padded embeddings to the dataframe
+            annotations_test1df_ = test1Df.assign(embeddings = pd.Series(embeddings_test1).values, label_pads = pd.Series(labels_test1).values, attn_masks = pd.Series(attention_masks_test1).values, inputpos = pd.Series(input_pos_test1).values) # assign the padded embeddings to the dataframe
+            annotations_test2df_ = test2Df.assign(embeddings = pd.Series(embeddings_test2).values, label_pads = pd.Series(labels_test2).values, attn_masks = pd.Series(attention_masks_test2).values, inputpos = pd.Series(input_pos_test2).values) # assign the padded embeddings to the dataframe
+
+            # Can delete this variables
+            del embeddings, embeddings_test, embeddings_test1, embeddings_test2
+            del labels, labels_test, labels_test1, labels_test2
+            del attention_masks, attention_masks_test, attention_masks_test1, attention_masks_test2
+            del input_pos, input_pos_test, input_pos_test1, input_pos_test2
+            gc.collect() # mark if for garbage collection
 
             return annotations_df_, annotations_testdf_, annotations_test1df_, annotations_test2df_, args
 
         elif args.text_level == 'sentence':
 
-            # allSentence_annot/
+            MAX_LEN = 100 # Check the average MAX_LEN of the annotations and sentences in the training and test sets
 
             print('Length of annotation corpus: ', len(annotations_df))
 
-            EBM_NLP_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/allSentence_annot/sentence_annotation2POS.txt'
+            # allSentence_annot/
+            EBM_NLP_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/allSentence_annot/sent_annot2POS_posnegtrail.txt'
             testDf = readEBMNLP_sentAnnot(EBM_NLP_sentences, args.label_type)
 
-            EBM_NLPgold_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/allSentence_annot/ebmnlpgold_sentence_annotation2POS.txt'
+            EBM_NLPgold_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/allSentence_annot/ebmnlpgold_sent_annot2POS_posnegtrail.txt'
             test1Df = readEBMNLP_sentAnnot(EBM_NLPgold_sentences, args.label_type)
             print('Loading EBM-NLP training and test sentences completed...')
 
-            hilfiker_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/allSentence_annot/hilfiker_sentence_annotation2POS.txt'
+            hilfiker_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/allSentence_annot/hilfiker_sent_annot2POS_posnegtrail.txt'
             test2Df = readEBMNLP_sentAnnot(hilfiker_sentences, args.label_type)
             print('Loading in-house physiotherapy test sentences completed...')
 
@@ -274,5 +319,12 @@ def FetchTrainingCandidates():
             annotations_testdf_ = testDf.assign(embeddings = pd.Series(embeddings_test).values, label_pads = pd.Series(labels_test).values, attn_masks = pd.Series(attention_masks_test).values, inputpos = pd.Series(input_pos_test).values) # assign the padded embeddings to the dataframe
             annotations_test1df_ = test1Df.assign(embeddings = pd.Series(embeddings_test1).values, label_pads = pd.Series(labels_test1).values, attn_masks = pd.Series(attention_masks_test1).values, inputpos = pd.Series(input_pos_test1).values) # assign the padded embeddings to the dataframe
             annotations_test2df_ = test2Df.assign(embeddings = pd.Series(embeddings_test2).values, label_pads = pd.Series(labels_test2).values, attn_masks = pd.Series(attention_masks_test2).values, inputpos = pd.Series(input_pos_test2).values) # assign the padded embeddings to the dataframe
+
+            # Can delete this variables
+            del embeddings, embeddings_test, embeddings_test1, embeddings_test2
+            del labels, labels_test, labels_test1, labels_test2
+            del attention_masks, attention_masks_test, attention_masks_test1, attention_masks_test2
+            del input_pos, input_pos_test, input_pos_test1, input_pos_test2
+            gc.collect() # mark if for garbage collection
 
             return annotations_df_, annotations_testdf_, annotations_test1df_, annotations_test2df_, args
