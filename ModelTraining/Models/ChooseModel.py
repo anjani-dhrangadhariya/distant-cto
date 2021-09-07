@@ -48,6 +48,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from tqdm import tqdm
 
 from Models.BERT_CRF import BERTCRF
+from Models.BERT_Linear import BERTLinear
 from Models.SCIBERT_CRF import SCIBERTCRF
 from Models.SCIBERTPOS_CRF import SCIBERTPOSCRF
 from Models.SCIBERT_Linear import SCIBERTLinear
@@ -55,6 +56,7 @@ from Models.SCIBERTPOS_Linear import SCIBERTPOSLinear
 from Models.SCIBERTPOSATTEN_CRF import SCIBERTPOSAttenCRF
 from Models.SCIBERTPOSATTEN_Linear import SCIBERTPOSAttenLinear
 from Models.SCIBERTPOSATTEN_activation import SCIBERTPOSAttenActLin
+from Models.semantic_crf import SemanticCRF
 
 def choose_tokenizer_type(pretrained_model):
     ##################################################################################
@@ -81,6 +83,8 @@ def choose_model(vector_type, pretrained_model, args):
 
     if pretrained_model == 'bertcrf':
         model = BERTCRF(args.freeze_bert, tokenizer, args.gpu, args.bidrec)
+    elif pretrained_model == 'bertlinear':
+        model = BERTLinear(args.freeze_bert, tokenizer, args.gpu, args.bidrec)
     elif pretrained_model == 'scibertcrf':
         model = SCIBERTCRF(args.freeze_bert, tokenizer, args.gpu, args.bidrec)
     elif pretrained_model == 'scibertposcrf':
@@ -95,6 +99,8 @@ def choose_model(vector_type, pretrained_model, args):
         model = SCIBERTPOSAttenLinear(args.freeze_bert, tokenizer, args.gpu, args.bidrec)
     elif pretrained_model == 'scibertposattenact':
         model = SCIBERTPOSAttenActLin(args.freeze_bert, tokenizer, args.gpu, args.bidrec)
+    # elif pretrained_model == 'semanticcrf':
+    #     model = SemanticCRF(args.freeze_bert, tokenizer, args.gpu, args.bidrec)
     else:
         print('Please enter correct model name...')
 
