@@ -112,9 +112,9 @@ def main():
     #     print("You did not give enough arguments\n ")
     #     sys.exit(1)
     # filename_A = sys.argv[1]
-    filename_A = '/home/anjani/distant-cto/ModelTraining/StatisticalTests/data/ebm/exp2_0.txt'
+    filename_A = '/home/anjani/distant-cto/ModelTraining/SignificanceTests/data/physio/exp2_1.txt'
     # filename_B = sys.argv[2]
-    filename_B = '/home/anjani/distant-cto/ModelTraining/StatisticalTests/data/ebm/exp1_1.txt'
+    filename_B = '/home/anjani/distant-cto/ModelTraining/SignificanceTests/data/physio/baseline.txt'
     alpha = 0.05
 
 
