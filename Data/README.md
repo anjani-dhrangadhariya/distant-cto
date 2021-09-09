@@ -18,4 +18,6 @@ The topmost `JSON` object from each line consists of 'string:value' pair contain
 
 There are two nested JSON objects under the root json object with string `'extraction1'` and `'aggregate_annot'`. `'aggregate_annot'` contains all the annotations from `'extraction1'` just in aggregated form. As the project uses `'aggregate_annot'`  for input, it's structure is described below.
 
-![Example JSON file structure]()
+![Example JSON file structure](https://github.com/anjani-dhrangadhariya/distant-cto/blob/main/Data/example_file_structure.jpg)
+
+
