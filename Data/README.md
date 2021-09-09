@@ -12,12 +12,13 @@ This directory includes two data files:
 
 ## File Structure
 
-The `.txt` data file consists of several lines, each line is stored in a `JSON` (short for JavaScript Object Notation) object representing one CTO record and the weak annotations obtained from this record. Example line is shown below.
+The `.txt` data file consists of several lines, each line is stored in a JSON (short for JavaScript Object Notation) object representing one CTO record and the weak annotations obtained from this record. Example line is shown below.
 
-The topmost `JSON` object from each line consists of 'string:value' pair containing the unique CTO ID of the CTO record (For example 'id:NCT04603443')
+The topmost JSON object from each line consists of 'string:value' pair containing the unique CTO ID of the CTO record (For example 'id:NCT04603443')
 
 There are two nested JSON objects under the root json object with string `'extraction1'` and `'aggregate_annot'`. `'aggregate_annot'` contains all the annotations from `'extraction1'` just in aggregated form. As the project uses `'aggregate_annot'`  for input, it's structure is described below.
 
 ![Example JSON file structure](https://github.com/anjani-dhrangadhariya/distant-cto/blob/main/Data/example_file_structure.jpg)
 
+Under the `'aggregate_annot'` JSON object are the 'Intervention' entity-annotated targets *t*. The short targets (comprising only a single sentence) are arranged into an array while the longer targets (comprising more than one sentence) are further arranged into a JSON object.
 
