@@ -30,6 +30,9 @@ import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from pylab import *
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import plotly.express as px
 
 from Preprocessing import *
 from ExtractData import *
@@ -86,7 +89,7 @@ def pos_neg_trail(aggregated_dictionary):
 
     mergedChunks_dictionary = dict()
     
-    if 1 in values_:
+    if 1 in values_: # If at least one sentence in the bag has a positive sentence, then partition the bag into chunks of 4 sentences.
         # Sort the dictionary
         aggregated_dictionary_sorted = collections.OrderedDict(sorted(aggregated_dictionary.items()))
 
@@ -113,7 +116,8 @@ def pos_neg_trail(aggregated_dictionary):
     if bool(mergedChunks_dictionary) == True:
         return mergedChunks_dictionary
 
-file_write_trial = '/mnt/nas2/data/systematicReview/clinical_trials_gov/Weak_PICO/intervention_data_preprocessed/conf_09/' + 'extraction1_pos_posnegtrail.txt'
+# file_write_trial = '/mnt/nas2/data/systematicReview/clinical_trials_gov/Weak_PICO/intervention_data_preprocessed/conf_09/' + 'extraction1_pos_posnegtrail_.txt'
+file_write_trial = '/mnt/nas2/data/systematicReview/clinical_trials_gov/Weak_PICO/intervention_data_preprocessed/conf_09/aaai_data.txt'
 
 ################################################################################
 # Instantiate ElasticSearch
@@ -129,7 +133,7 @@ results_gen = helpers.scan(
     query={"query": {"match_all": {}}},
     index='ctofull-index',
     size=1000,
-    scroll="60m",
+    scroll="80m",
 )
 
 match_scores = []
@@ -141,13 +145,11 @@ intervention_classes = []
 intervention_names_mapped = []
 intervention_class_mapped = []
 
-intervention_names_unmapped = []
-intervention_class_unmapped = []
 
 res = es.search(index="ctofull-index", body={"query": {"match_all": {}}}, size=10000)
 print('Total number of records retrieved: ', res['hits']['total']['value'])
-# for hit in results_gen: # XXX: Entire CTO
-for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search results from the CTO
+for hit in results_gen: # XXX: Entire CTO
+# for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search results from the CTO
 
     write_hit = collections.defaultdict(dict) # final dictionary to write to the file...
 
@@ -240,8 +242,8 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
 
             if interventionName is not None:
 
-                intervention_names.append(interventionName)
-                intervention_classes.append(interventionType)
+                intervention_names.append(interventionName.strip())
+                intervention_classes.append(interventionType.strip())
 
                 ####################################annotations​##################################################
                 # Candidate Generation 1: Only Intervention names
@@ -329,14 +331,9 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
 
 
                 if officialTitleTarget_annot or briefTitleTarget or interventionDescription_annot or briefSummaryTarget_annot or detailedDescriptionTarget_annot:
-                    intervention_names_mapped.append( interventionName )
+                    intervention_names_mapped.append( interventionName.strip() )
                     if interventionType:
-                        intervention_class_mapped.append( interventionType )
-                else:
-                    # if the term didnt map anywhere
-                    intervention_names_unmapped.append( interventionName )
-                    if interventionType:
-                        intervention_class_unmapped.append( interventionType )
+                        intervention_class_mapped.append( interventionType.strip() )
 
 
                 # The main intervention term is tackled. Now tackle the intervention synonyms...
@@ -355,9 +352,9 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
 
                         write_intervention_syn['synonym_name'] = eachInterventionOtherName
 
-                        intervention_names.append(eachInterventionOtherName)
+                        intervention_names.append(eachInterventionOtherName.strip())
                         # For each intervention synonym added to the list, add its class too
-                        intervention_classes.append(interventionType)
+                        intervention_classes.append(interventionType.strip())
 
                         ######################################################################################
                         # Match the source intervention to the official title
@@ -442,14 +439,9 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
                                     # agrregateannot_detailedDescription.append(tempAnnot)
 
                         if officialTitleTarget_synannot or briefTitleTarget_synannot or interventionDescription_synannot or briefSummaryTarget_synannot or detailedDescriptionTarget_synannot:
-                            intervention_names_mapped.append( eachInterventionOtherName )
+                            intervention_names_mapped.append( eachInterventionOtherName.strip() )
                             if interventionType:
-                                intervention_class_mapped.append( interventionType )
-                        else:
-                            # if the term didnt map anywhere
-                            intervention_names_unmapped.append( eachInterventionOtherName )
-                            if interventionType:
-                                intervention_class_unmapped.append( interventionType )
+                                intervention_class_mapped.append( interventionType.strip() )
                         
 
                         # Add to the "write_intervention" here
@@ -492,14 +484,19 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
 
         logNCTID = 'Writing ID: ' + NCT_id
         logging.info(logNCTID)
-        # with open(file_write_trial, 'a+') as wf:
-        #     wf.write('\n')
-        #     json_str = json.dumps(write_hit)
-        #     wf.write(json_str)
+        with open(file_write_trial, 'a+') as wf:
+            wf.write('\n')
+            json_str = json.dumps(write_hit)
+            wf.write(json_str)
     except:
         logNCTID = 'Caused exception at the NCT ID: ' + NCT_id
         logging.info(logNCTID)
 
+
+
+#########################################################################################################################
+# Generated candidate statistics - Retrieved
+#########################################################################################################################
 
 def getDistribution(class_dist, intervention_classes):
     labels = []
@@ -511,42 +508,65 @@ def getDistribution(class_dist, intervention_classes):
 
     df = pd.DataFrame(list(zip(labels, sizes)), columns =['labels', 'sizes'])
 
-    return df
+    return df, labels, sizes
 
 print( 'Total number of interventions retrieved from the source: ', len(intervention_names) )
 print( 'Total number of interventions retrieved from the source (unique): ', len(set(intervention_names)) )
 print( 'Total number of intervention classes retrieved from the source: ', len(intervention_classes) )
 
-class_dist = Counter(intervention_classes)
-print(class_dist)
-df = getDistribution(class_dist, intervention_classes)
+#with open('/home/anjani/distant-cto/ResultInspection/candidategeneration/data/retrieved_intervention.csv', 'a+') as retf:
+#    temp = pd.DataFrame(list(zip(intervention_names, intervention_classes)), columns =['name', 'class'])
+#    retf.write("\n")
+#    temp.to_csv(retf, sep='\t')
 
-import plotly.express as px
-fig = px.pie(df, values='sizes', names='labels', title='Distribution of Intervention classes retrieved')
-fig.show()
+
+# class_dist = Counter(intervention_classes)
+# print(class_dist)
+# df, ret_labels, ret_sizes = getDistribution(class_dist, intervention_classes)
+
+# fig = px.pie(df, values='sizes', names='labels', title='Distribution of Intervention classes retrieved')
+# fig.update_traces(textfont_size=30)
+# fig.show()
+
+
 #########################################################################################################################
+# Generated candidate statistics - Mapped
+#########################################################################################################################
+
 print( 'Total number of source interventions mapped to the target: ', len(intervention_names_mapped) )
 print( 'Total number of source interventions mapped to the target (unique): ', len(set(intervention_names_mapped)) )
 print( 'Total number of source intervention classes mapped to the target: ', len(intervention_class_mapped) )
 
+#with open('/home/anjani/distant-cto/ResultInspection/candidategeneration/data/mapped_interventions.csv', 'a+') as mapf:
+    #temp = pd.DataFrame(list(zip(intervention_names_mapped, intervention_class_mapped)), columns =['name', 'class'])
+    #mapf.write("\n")
+    #temp.to_csv(mapf, sep='\t')
 
-class_dist_mapped = Counter(intervention_class_mapped)
-print(class_dist_mapped)
-df_mapped = getDistribution(class_dist_mapped, intervention_class_mapped)
 
-import plotly.express as px
-fig = px.pie(df_mapped, values='sizes', names='labels', title='Distribution of Intervention classes mapped')
-fig.show()
+# class_dist_mapped = Counter(intervention_class_mapped)
+# print(class_dist_mapped)
+# df_mapped, map_labels, map_sizes = getDistribution(class_dist_mapped, intervention_class_mapped)
+
+# fig = px.pie(df_mapped, values='sizes', names='labels', title='Distribution of Intervention classes mapped')
+# fig.update_traces(textfont_size=30)
+# fig.show()
+
 #########################################################################################################################
-print( 'Total number of source interventions unmapped to the target: ', len(intervention_names_unmapped) )
-print( 'Total number of source interventions unmapped to the target (unique): ', len(set(intervention_names_unmapped)) )
-print( 'Total number of source intervention classes unmapped to the target: ', len(intervention_class_unmapped) )
+# Generate pie charts
+#########################################################################################################################
 
+# Create subplots: use 'domain' type for Pie subplot
+# fig = make_subplots(rows=1, cols=2, specs=[[{'type':'domain'}, {'type':'domain'}]])
+# fig.add_trace(go.Pie(labels=ret_labels, values=df.sizes, name='classes retrieved'), 1, 1)
+# fig.add_trace(go.Pie(labels=ret_labels, values=df_mapped.sizes, name='classes mapped'), 1, 2)
 
-class_dist_unmapped = Counter(intervention_class_unmapped)
-print(class_dist_unmapped)
-df_unmapped = getDistribution(class_dist_unmapped, intervention_class_unmapped)
+# # Use `hole` to create a donut-like pie chart
+# fig.update_traces(hole=.4, hoverinfo="label+percent+name")
+# fig.update_traces(textfont_size=30)
 
-import plotly.express as px
-fig = px.pie(df_unmapped, values='sizes', names='labels', title='Distribution of Intervention classes unmapped')
-fig.show()
+# fig.update_layout(
+#     title_text='Distribution of Intervention classes retrieved vs. classes mapped',
+#     annotations=[dict(text='retrieved', x=0.18, y=0.5, font_size=30, showarrow=False),
+#                  dict(text='mapped', x=0.82, y=0.5, font_size=30, showarrow=False)])
+
+# fig.show()

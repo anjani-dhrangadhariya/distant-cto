@@ -51,8 +51,8 @@ def align_highconf_shorttarget(target, source):
         for match in matches:
             if match[0] == 1.0:                    
                 token, annot = extract1Annotation(source, target, match)
-            # if match[0] >= 0.9 and match[0] < 1.0:
-            #     token_i, annot_i = extract09Annotation(source, target, match)
+            elif match[0] >= 0.9 and match[0] < 1.0:
+                token_i, annot_i = extract09Annotation(source, target, match)
 
     assert len(token) == len(annot)
     assert len(token_i) == len(annot_i)
@@ -92,17 +92,16 @@ def align_highconf_longtarget(target, source):
                         token_i, annot_i = extract1Annotation(source, eachSentence, match)
                         annot.extend( annot_i )
                         token.extend( token_i )
-                    # if match[0] >= 0.9 and match[0] < 1.0:
-                    #     token_i, annot_i = extract09Annotation(source, eachSentence, match)
-                    #     annot.extend( annot_i )
-                    #     token.extend( token_i )
+                    if match[0] >= 0.9 and match[0] < 1.0:
+                        token_i, annot_i = extract09Annotation(source, eachSentence, match)
+                        annot.extend( annot_i )
+                        token.extend( token_i )
                 
             if annot:
                 token_annot = [token, annot, [eachTuple[1]  for eachTuple in nltk.pos_tag_sents([token])[0]]]
                 collect_annotations['sentence' + str(i)] = token_annot
 
     assert len(token) == len(annot)
-
     return collect_annotations
 
 
@@ -131,10 +130,10 @@ def align_highconf_longtarget_negSent(target, source):
                         token_i, annot_i = extract1Annotation(source, eachSentence, match)
                         annot.extend( annot_i )
                         token.extend( token_i )
-                    # if match[0] >= 0.9 and match[0] < 1.0:
-                    #     token_i, annot_i = extract09Annotation(source, eachSentence, match)
-                    #     annot.extend( annot_i )
-                    #     token.extend( token_i )
+                    if match[0] >= 0.9 and match[0] < 1.0:
+                        token_i, annot_i = extract09Annotation(source, eachSentence, match)
+                        annot.extend( annot_i )
+                        token.extend( token_i )
 
             if annot:
                 token_annot = [token, annot, [eachTuple[1]  for eachTuple in nltk.pos_tag_sents([token])[0]]]
