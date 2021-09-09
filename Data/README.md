@@ -4,7 +4,7 @@ DISTANT-CTO is a weakly-labeled dataset of 'Intervention' and 'Comparator' entit
 
 ## Utility
 
-The dataset could be used an input for training 'Intervention' named-entity recognition (NER) models. 
+The dataset could be used as an input for training 'Intervention' named-entity recognition (NER) models. 
 
 ## Availability
 
