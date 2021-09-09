@@ -18,6 +18,8 @@ Both the datasets follow the same file structure.
 
 ## File Structure
 
+NOTE: If you would like to fiddle with the example yourself, please open the example.json file in http://jsonviewer.stack.hu/.
+
 The `.txt` data file consists of several lines, each line is stored in a JSON (short for JavaScript Object Notation) object representing one CTO record and the weak annotations obtained from this record. Example line is shown below.
 
 The topmost JSON object from each line consists of 'string:value' pair containing the unique CTO ID of the CTO record (For example 'id:NCT04603443')
