@@ -1,0 +1,360 @@
+CandidateGeneration/candidate_09.txt
+ModelTraining/TrainContextualModel.py
+ModelTraining/__pycache__/ReadCandidateData.cpython-36.pyc
+ModelTraining/Functions/__pycache__/ThresholdMoving.cpython-36.pyc
+ModelTraining/logs/0/events.out.tfevents.1614887586.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSciAtten_CRF/events.out.tfevents.1616692596.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_LSTMCRF/events.out.tfevents.1616674328.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_LSTMCRF/events.out.tfevents.1616680536.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_LSTMCRF/events.out.tfevents.1616683904.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_LSTMCRF/events.out.tfevents.1616684023.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_LSTMCRF/events.out.tfevents.1616684271.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_LSTMCRF/events.out.tfevents.1616684413.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_LSTMCRF/events.out.tfevents.1616685090.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_LSTMCRF/events.out.tfevents.1616685301.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_LSTMCRF/events.out.tfevents.1616685438.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_LSTMCRF/events.out.tfevents.1616685608.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_LSTMCRF/events.out.tfevents.1616685856.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_LSTMCRF/events.out.tfevents.1616686912.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_LSTMCRF/events.out.tfevents.1616687058.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_LSTMCRF/events.out.tfevents.1616687211.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_LSTMCRF/events.out.tfevents.1616687551.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_LSTMCRF/events.out.tfevents.1616687659.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_LSTMCRF/events.out.tfevents.1616688897.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_LSTMCRF/events.out.tfevents.1616689124.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_LSTMCRF/events.out.tfevents.1616689340.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_LSTMCRF/events.out.tfevents.1616689661.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616342508.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616342634.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616343204.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616343376.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616343918.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616344247.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616344578.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616344742.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616344934.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616345071.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616345240.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616345551.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616345772.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616345956.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616346615.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616348282.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616348435.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616348662.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616348854.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616348974.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616349098.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616349258.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616349459.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616349669.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616349818.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616350099.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616350349.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616350512.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616351021.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616351157.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616351359.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616351487.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616351747.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616352034.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616352364.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616352595.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616352784.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616352962.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616353199.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616353338.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616353569.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616353804.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616353986.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616354105.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616354299.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616354422.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616354583.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616354779.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616355286.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616355396.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616355567.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616355697.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616355821.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616356643.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616356762.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616356952.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616357065.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616357198.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616357315.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616357559.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616357773.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616357951.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616358139.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616358293.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616358488.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616358660.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616358802.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616358996.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616359151.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616359292.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616359438.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616359618.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616359732.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616360105.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616360220.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616360428.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616360591.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616506240.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616506565.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616506896.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616507232.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616507613.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedCRF/events.out.tfevents.1616507817.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POSci_maskedLinear/events.out.tfevents.1616514760.lxhdesuto
+ModelTraining/logs/combined_w_shortAnn_IO_POScibert/events.out.tfevents.1616341141.lxhdesuto
+ModelTraining/logs/combinedtrainingdev_w_shorterAnnots_BIO/events.out.tfevents.1615909864.lxhdesuto
+ModelTraining/logs/combinedtrainingdev_w_shorterAnnots_BIO/events.out.tfevents.1615983665.lxhdesuto
+ModelTraining/logs/combinedtrainingdev_w_shorterAnnots_BIO/events.out.tfevents.1615983784.lxhdesuto
+ModelTraining/logs/combinedtrainingdev_w_shorterAnnots_BIO/events.out.tfevents.1615983904.lxhdesuto
+ModelTraining/logs/combinedtrainingdev_w_shorterAnnots_BIO/events.out.tfevents.1615984032.lxhdesuto
+ModelTraining/logs/combinedtrainingdev_w_shorterAnnots_BIO/events.out.tfevents.1615984196.lxhdesuto
+ModelTraining/logs/combinedtrainingdev_w_shorterAnnots_BIO/events.out.tfevents.1615984353.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1615990203.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616076061.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616078907.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616078992.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616079130.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616080947.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616081265.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616081477.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616081616.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616082089.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616082645.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616082798.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616082950.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616083141.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616083491.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616083729.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616084102.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616084318.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616084537.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616085294.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616086293.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616086608.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616086800.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616087141.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616087529.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616088309.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616088454.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616088576.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616088705.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616088875.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616088989.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616089223.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616089455.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616089853.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616089980.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616090106.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616090256.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616090578.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616093535.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616093733.lxhdesuto
+ModelTraining/logs/combtraindev_w_shortAnn_BIO_scibert/events.out.tfevents.1616094331.lxhdesuto
+ModelTraining/logs/random/events.out.tfevents.1615219070.lxhdesuto
+ModelTraining/logs/sent_test_as_development/events.out.tfevents.1615223699.lxhdesuto
+ModelTraining/logs/test1_as_development_sentences_w_int/events.out.tfevents.1615302865.lxhdesuto
+ModelTraining/logs/test1_as_development_sentences_wo_shorterAnnots/events.out.tfevents.1615415234.lxhdesuto
+ModelTraining/logs/test1_as_development_sentences_wo_shorterAnnots/events.out.tfevents.1615459192.lxhdesuto
+ModelTraining/logs/test1_as_development_sentences_wo_shorterAnnots/events.out.tfevents.1615541565.lxhdesuto
+ModelTraining/logs/test1_as_development_sentences_wo_shorterAnnots/events.out.tfevents.1615560791.lxhdesuto
+ModelTraining/logs/test1_as_development_sentences_wo_shorterAnnots/events.out.tfevents.1615561737.lxhdesuto
+ModelTraining/logs/test1_as_development_sentences_wo_shorterAnnots/events.out.tfevents.1615562198.lxhdesuto
+ModelTraining/logs/test1_as_development_sentences_wo_shorterAnnots/events.out.tfevents.1615563035.lxhdesuto
+ModelTraining/logs/test1_as_development_sentences_wo_shorterAnnots/events.out.tfevents.1615563258.lxhdesuto
+ModelTraining/logs/test1_as_development_sentences_wo_shorterAnnots/events.out.tfevents.1615801275.lxhdesuto
+ModelTraining/logs/test1_as_development_sentences_wo_shorterAnnots/events.out.tfevents.1615801530.lxhdesuto
+ModelTraining/logs/test1_as_development_sentences_wo_shorterAnnots/events.out.tfevents.1615801772.lxhdesuto
+ModelTraining/logs/test1_as_development_sentences_wo_shorterAnnots/events.out.tfevents.1615801835.lxhdesuto
+ModelTraining/logs/test1_as_development_sentences_wo_shorterAnnots/events.out.tfevents.1615801915.lxhdesuto
+ModelTraining/logs/test1_as_development_sentences_wo_shorterAnnots/events.out.tfevents.1615802420.lxhdesuto
+ModelTraining/logs/test1_as_development_sentences_wo_shorterAnnots/events.out.tfevents.1615803638.lxhdesuto
+ModelTraining/logs/test1_as_development_sentences_wo_shorterAnnots/events.out.tfevents.1615803821.lxhdesuto
+ModelTraining/logs/test1_as_development_sentences_wo_shorterAnnots/events.out.tfevents.1615804392.lxhdesuto
+ModelTraining/logs/test1_dev_woShorterAnnot_BIO/events.out.tfevents.1615809901.lxhdesuto
+ModelTraining/logs/test1_dev_woShorterAnnot_BIO/events.out.tfevents.1615903394.lxhdesuto
+ModelTraining/logs/test1_dev_woShorterAnnot_BIO/events.out.tfevents.1615904096.lxhdesuto
+ModelTraining/logs/test1_dev_woShorterAnnot_BIO/events.out.tfevents.1615907965.lxhdesuto
+ModelTraining/logs/test_as_development/events.out.tfevents.1614957771.lxhdesuto
+CandidateGeneration/logs/2021_02_24 15_19_51.log
+CandidateGeneration/logs/2021_03_03 12_46_10.log
+CandidateGeneration/logs/2021_03_04 10_51_28.log
+CandidateGeneration/logs/2021_03_05 18_46_57.log
+CandidateGeneration/logs/2021_03_10 13_02_03.log
+CandidateGeneration/logs/2021_03_10 17_57_28.log
+CandidateGeneration/logs/2021_03_17 15_59_43.log
+CandidateGeneration/logs/2021_03_17 16_38_34.log
+CandidateGeneration/logs/2021_03_18 13_27_01.log
+CandidateGeneration/logs/2021_03_21 14_07_46.log
+CandidateGeneration/logs/2021_07_06 16_42_45.log
+CandidateGeneration/logs/2021_08_02 16_55_17.log
+CandidateGeneration/logs/2021_08_02 17_00_08.log
+ResultInspection/.ipynb_checkpoints/ErrorDistribution-checkpoint.ipynb
+.ipynb_checkpoints/cto-checkpoint.ipynb
+CandidateGeneration/__pycache__/Align.cpython-36.pyc
+CandidateGeneration/__pycache__/ExtractAnnot.cpython-36.pyc
+CandidateGeneration/__pycache__/ExtractData.cpython-36.pyc
+CandidateGeneration/__pycache__/Preprocessing.cpython-36.pyc
+CandidateGeneration/__pycache__/Scoring.cpython-36.pyc
+CandidateGeneration/__pycache__/SourceTargets.cpython-36.pyc
+logs/2020_12_11 16_01_17cto_basecrawling.log
+logs/2021_02_11 10_13_44.log
+logs/2021_02_11 14_42_54.log
+logs/2021_02_16 17_23_03.log
+logs/2021_02_18 18_06_44.log
+data/CTOurls.txt
+data/CTO_identifiersurls.txt
+.vscode/launch.json
+__pycache__/Align.cpython-36.pyc
+__pycache__/ExtractData.cpython-36.pyc
+__pycache__/Preprocessing.cpython-36.pyc
+__pycache__/random.cpython-36.pyc
+__pycache__/Scoring.cpython-36.pyc
+__pycache__/utilities.cpython-36.pyc
+ResultInspection/ebm_test.csv
+ResultInspection/hilfiker.csv
+spareCode.py
+literature/3241741.pdf
+literature/Distant_Supervision_of_Named_Entity_Reco.pdf
+ModelTraining/Models/__pycache__/BERT_CRF.cpython-36.pyc
+ModelTraining/Models/__pycache__/ChooseModel.cpython-36.pyc
+ModelTraining/Models/__pycache__/HelperFunctions.cpython-36.pyc
+ModelTraining/Models/__pycache__/SCIBERT_CRF.cpython-36.pyc
+ModelTraining/Models/__pycache__/SCIBERT_Linear.cpython-36.pyc
+ModelTraining/Models/__pycache__/SCIBERTPOS_CRF.cpython-36.pyc
+ModelTraining/Models/__pycache__/SCIBERTPOS_Linear.cpython-36.pyc
+ModelTraining/Models/__pycache__/SCIBERTPOSATTEN_activation.cpython-36.pyc
+ModelTraining/Models/__pycache__/SCIBERTPOSATTEN_CRF.cpython-36.pyc
+ModelTraining/Models/__pycache__/SCIBERTPOSATTEN_Linear.cpython-36.pyc
+ModelTraining/Models/__pycache__/semantic_crf.cpython-36.pyc
+ModelTraining/DataBuilders/__pycache__/ContextualVectorBuilder.cpython-36.pyc
+ModelTraining/DataBuilders/__pycache__/SemanticVectorBuilder.cpython-36.pyc
+ModelTraining/DataBuilders/__pycache__/ValidationDataBuilder.cpython-36.pyc
+ModelTraining/DataBuilders/__pycache__/ValidationSentenceBuilder.cpython-36.pyc
+ModelTraining/DataBuilders/__pycache__/WordVectorBuilder.cpython-36.pyc
+ResultInspection/candidategeneration/data/mapped_interventions.csv
+ResultInspection/candidategeneration/data/retrieved_intervention.csv
+ResultInspection/candidategeneration/.ipynb_checkpoints/candgen_results-checkpoint.ipynb
+sentence_selector/sentence_selector.ipynb
+sentence_selector/utilities.py
+sentence_selector/.ipynb_checkpoints/sentence_selector-checkpoint.ipynb
+sentence_selector/__pycache__/utilities.cpython-36.pyc
+sentence_selector/data/cached_dev_BioBERT_512_binary
+sentence_selector/data/cached_train_BioBERT_512_binary
+sentence_selector/data/test.tsv
+sentence_selector/data/train.tsv
+sentence_selector/output/eval_results.txt
+sentence_selector/output/checkpoint-10000/config.json
+sentence_selector/output/checkpoint-10000/pytorch_model.bin
+sentence_selector/output/checkpoint-12000/config.json
+sentence_selector/output/checkpoint-12000/pytorch_model.bin
+sentence_selector/output/checkpoint-14000/config.json
+sentence_selector/output/checkpoint-14000/pytorch_model.bin
+sentence_selector/output/checkpoint-16000/config.json
+sentence_selector/output/checkpoint-16000/pytorch_model.bin
+sentence_selector/output/checkpoint-18000/config.json
+sentence_selector/output/checkpoint-18000/pytorch_model.bin
+sentence_selector/output/checkpoint-2000/config.json
+sentence_selector/output/checkpoint-2000/pytorch_model.bin
+sentence_selector/output/checkpoint-20000/config.json
+sentence_selector/output/checkpoint-20000/pytorch_model.bin
+sentence_selector/output/checkpoint-22000/config.json
+sentence_selector/output/checkpoint-22000/pytorch_model.bin
+sentence_selector/output/checkpoint-24000/config.json
+sentence_selector/output/checkpoint-24000/pytorch_model.bin
+sentence_selector/output/checkpoint-26000/config.json
+sentence_selector/output/checkpoint-26000/pytorch_model.bin
+sentence_selector/output/checkpoint-4000/config.json
+sentence_selector/output/checkpoint-4000/pytorch_model.bin
+sentence_selector/output/checkpoint-6000/config.json
+sentence_selector/output/checkpoint-6000/pytorch_model.bin
+sentence_selector/output/checkpoint-8000/config.json
+sentence_selector/output/checkpoint-8000/pytorch_model.bin
+sentence_selector.ipynb
+images/interventiontypes_bestconfidence.png
+ResultInspection/.ipynb_checkpoints/candgen_results-checkpoint.ipynb
+ResultInspection/candidategeneration/.ipynb_checkpoints/NER_results-checkpoint.ipynb
+ModelTraining/DataBuilders/__pycache__/ValidationDocumentBuilder.cpython-36.pyc
+sentence_selector.ipynb
+CandidateGeneration/logs/2021_08_18 13_05_23.log
+CandidateGeneration/logs/2021_08_18 13_06_42.log
+CandidateGeneration/logs/2021_08_18 13_10_39.log
+CandidateGeneration/logs/2021_08_18 13_10_49.log
+CandidateGeneration/logs/2021_08_18 13_15_05.log
+CandidateGeneration/logs/2021_08_18 13_19_35.log
+CandidateGeneration/logs/2021_08_18 16_37_57.log
+CandidateGeneration/logs/2021_08_18 16_42_11.log
+CandidateGeneration/logs/2021_08_18 17_54_02.log
+CandidateGeneration/logs/2021_08_18 17_58_16.log
+CandidateGeneration/logs/2021_08_18 18_19_24.log
+CandidateGeneration/logs/2021_08_18 18_23_35.log
+CandidateGeneration/logs/2021_08_18 18_36_54.log
+CandidateGeneration/logs/2021_08_18 18_41_10.log
+CandidateGeneration/logs/2021_08_18 18_51_24.log
+CandidateGeneration/logs/2021_08_18 18_55_43.log
+CandidateGeneration/logs/2021_08_19 09_25_56.log
+CandidateGeneration/logs/2021_08_19 09_30_09.log
+CandidateGeneration/logs/2021_08_19 09_32_19.log
+CandidateGeneration/logs/2021_08_19 09_36_40.log
+CandidateGeneration/logs/2021_08_19 09_47_36.log
+CandidateGeneration/logs/2021_08_19 09_47_57.log
+CandidateGeneration/logs/2021_08_19 09_48_03.log
+CandidateGeneration/logs/2021_08_19 09_49_23.log
+CandidateGeneration/logs/2021_08_19 09_49_30.log
+CandidateGeneration/logs/2021_08_19 09_50_59.log
+CandidateGeneration/logs/2021_08_19 09_51_05.log
+CandidateGeneration/logs/2021_08_19 09_52_12.log
+CandidateGeneration/logs/2021_08_19 09_52_19.log
+CandidateGeneration/logs/2021_08_19 09_53_21.log
+CandidateGeneration/logs/2021_08_19 09_53_28.log
+CandidateGeneration/logs/2021_08_19 09_54_54.log
+CandidateGeneration/logs/2021_08_19 09_59_07.log
+CandidateGeneration/logs/2021_08_19 10_30_35.log
+CandidateGeneration/logs/2021_08_19 10_34_21.log
+CandidateGeneration/logs/2021_08_19 10_38_39.log
+CandidateGeneration/logs/2021_08_19 11_59_56.log
+CandidateGeneration/logs/2021_08_19 12_06_17.log
+CandidateGeneration/logs/2021_08_19 12_06_24.log
+CandidateGeneration/logs/2021_08_19 12_16_43.log
+CandidateGeneration/logs/2021_08_19 12_21_56.log
+CandidateGeneration/logs/2021_08_19 13_34_45.log
+CandidateGeneration/logs/2021_08_19 13_39_40.log
+CandidateGeneration/logs/2021_08_19 14_45_32.log
+CandidateGeneration/logs/2021_08_19 14_50_30.log
+CandidateGeneration/logs/2021_08_19 16_24_13.log
+CandidateGeneration/logs/2021_08_19 16_29_02.log
+CandidateGeneration/logs/2021_08_19 17_28_09.log
+CandidateGeneration/logs/2021_08_19 17_35_53.log
+CandidateGeneration/logs/2021_08_20 10_43_00.log
+CandidateGeneration/logs/2021_08_20 10_47_48.log
+ModelTraining/Models/__pycache__/BERT_Linear.cpython-36.pyc
+CandidateGeneration/logs/2021_09_06 15_10_07.log
+CandidateGeneration/logs/2021_09_06 15_14_20.log
+ResultInspection/candidate_09.txt
+ModelTraining/Functions/ThresholdMoving.py
+CandidateGeneration/logs/2021_09_06 15_54_23.log
+CandidateGeneration/logs/2021_09_06 15_59_07.log
+ModelTraining/SignificanceTests/data/ebm/exp1_1.txt
+ModelTraining/SignificanceTests/data/ebm/exp2_0.txt
+ModelTraining/SignificanceTests/data/physio/exp1_1.txt
+ModelTraining/SignificanceTests/data/physio/exp2_1.txt
+ModelTraining/SignificanceTests/data/ebm/baseline.txt
+ModelTraining/SignificanceTests/data/physio/baseline.txt
+CandidateGeneration/Align.py
+CandidateGeneration/SourceTargets.py
+CandidateGeneration/
+data/cto_basespider.py
+data/indexing.py
+data/mapping.json
+data/
+DataCollection/cto_basespider.py
+DataCollection/CTO_identifiersurls.txt
+DataCollection/CTOurls.txt
+DataCollection/indexing.py
+DataCollection/mapping.json

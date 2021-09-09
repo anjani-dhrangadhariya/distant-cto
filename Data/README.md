@@ -4,7 +4,7 @@ DISTANT-CTO is a weakly-labeled dataset of 'Intervention' and 'Comparator' entit
 
 ## Availability
 
-The dataset is available in .txt file format. 
+The dataset is available in .txt file format. Full dataset could be downloaded from [here](https://pages.github.com/).
 
 ## File Structure
 
