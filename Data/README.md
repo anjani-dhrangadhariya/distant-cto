@@ -4,7 +4,7 @@ DISTANT-CTO is a weakly-labeled dataset of 'Intervention' and 'Comparator' entit
 
 ## Availability
 
-The dataset is available in `.txt` file format. Full dataset could be downloaded from [here](https://pages.github.com/).
+The dataset is available in `.txt` file format. Full dataset could be downloaded from [the dummy link](https://pages.github.com/).
 
 This directory includes two data files:
 1) `extraction1_pos_posnegtrail_conf1.txt` - the `.txt` data files contains all the weak annotations, source intervention terms mapped onto target sentences from clinicaltrials.org (CTO) with a confidence score of 1.0, and
@@ -20,5 +20,11 @@ There are two nested JSON objects under the root json object with string `'extra
 
 ![Example JSON file structure](https://github.com/anjani-dhrangadhariya/distant-cto/blob/main/Data/example_file_structure.jpg)
 
-Under the `'aggregate_annot'` JSON object are the 'Intervention' entity-annotated targets *t*. The short targets (comprising only a single sentence) are arranged into an array while the longer targets (comprising more than one sentence) are further arranged into a JSON object.
+Under the `'aggregate_annot'` JSON object are the 'Intervention' entity-annotated targets *t*. The short targets (comprising only a single sentence) are arranged into an array while the long targets (comprising more than one sentence) are further arranged into a JSON object.
 
+#### Description for short targets
+
+
+
+
+#### Description for long targets
