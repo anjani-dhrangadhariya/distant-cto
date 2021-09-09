@@ -22,9 +22,11 @@ There are two nested JSON objects under the root json object with string `'extra
 
 Under the `'aggregate_annot'` JSON object are the 'Intervention' entity-annotated targets *t*. The short targets (comprising only a single sentence) are arranged into an array while the long targets (comprising more than one sentence) are further arranged into a JSON object.
 
-#### Description for short targets
+### Description for short targets
+
+Each target has its own `'targetname'` which is a list of tokens from the tokenized target, `'targetname_annot'` which is a list containing annotation for each individual token from the tokenized target, and `'targetname_pos'` which is a list containing part-of-speech tags for each individual token from the tokenized target. An example of shown below.
 
 
+![Example](https://github.com/anjani-dhrangadhariya/distant-cto/blob/main/Data/example_file_structure.jpg)
 
-
-#### Description for long targets
+### Description for long targets
