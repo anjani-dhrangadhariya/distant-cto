@@ -56,6 +56,7 @@ from Models.SCIBERTPOS_Linear import SCIBERTPOSLinear
 from Models.SCIBERTPOSATTEN_CRF import SCIBERTPOSAttenCRF
 from Models.SCIBERTPOSATTEN_Linear import SCIBERTPOSAttenLinear
 from Models.SCIBERTPOSATTEN_activation import SCIBERTPOSAttenActLin
+from Models.BERTBiLSTM_CRF import BERTBiLSTMCRF
 from Models.semantic_crf import SemanticCRF
 
 def choose_tokenizer_type(pretrained_model):
@@ -83,6 +84,8 @@ def choose_model(vector_type, pretrained_model, args):
 
     if pretrained_model == 'bertcrf':
         model = BERTCRF(args.freeze_bert, tokenizer, args.gpu, args.bidrec)
+    if pretrained_model == 'bertbilstmcrf':
+        model = BERTBiLSTMCRF(args.freeze_bert, tokenizer, args.gpu, args.bidrec)
     elif pretrained_model == 'bertlinear':
         model = BERTLinear(args.freeze_bert, tokenizer, args.gpu, args.bidrec)
     elif pretrained_model == 'scibertcrf':

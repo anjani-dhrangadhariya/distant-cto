@@ -5,6 +5,10 @@ import numpy as np
 # keras essentials
 from keras.preprocessing.sequence import pad_sequences
 
+from torchtext.legacy import data
+import torchtext.vocab as vocab
+
+
 def createAttnMask(input_ids, k):
     # Add attention masks
     # Create attention masks
@@ -21,12 +25,12 @@ def createAttnMask(input_ids, k):
         # Store the attention mask for this sentence.
         attention_masks.append(att_mask)
 
-    return attention_masks
+    return np.array(attention_masks)
 
 def choose_vector_type(vector_type):
 
     if vector_type == 'word2vec':
-        word2vec_path = "/mnt/nas2/data/GoogleNews-vectors-negative300.bin" # Google news vectors
+        word2vec_path = "/mnt/nas2/data/Personal/Anjani/wordEmbeddings/GoogleNews-vectors-negative300.bin" # Google news vectors
         word2vec = gensim.models.KeyedVectors.load_word2vec_format(word2vec_path, binary=True, limit=20000)
         return word2vec, 300
     if vector_type == 'bio2vec_2':
@@ -58,17 +62,32 @@ def get_word2vec_embeddings(vectors, clean_questions, k, generate_missing=False)
 
 def get_semantic_vectors(annotations_df, vector_type, MAX_LEN):
 
+    # chosen_vector, k = choose_vector_type(vector_type)
+    # embeddings = get_word2vec_embeddings(chosen_vector, annotations_df, k = k)
+
+    # # get vectors
+    # embeddings = pad_sequences( annotations_df , maxlen=MAX_LEN, value=2, padding="post", dtype='float32') # padding the sequence with 2 because 0 can be a word vector
+
+    # # Generate masks
+    # attention_masks = createAttnMask(embeddings, k = k)
+
+    # # Pad the labels
+    # labels = pad_sequences( annotations_df['labels'] , maxlen=MAX_LEN, value=0, padding="post")
+    # # labels = labels.tolist()
+
+    # return embeddings.tolist(), labels, attention_masks, vector_type
+
     chosen_vector, k = choose_vector_type(vector_type)
-    embeddings = get_word2vec_embeddings(chosen_vector, annotations_df, k = k)
 
-    # get vectors
-    embeddings = pad_sequences( embeddings , maxlen=MAX_LEN, value=2, padding="post", dtype='float32') # padding the sequence with 2 because 0 can be a word vector
+    # use torchtext to define the dataset field containing text
+    text_field = data.Field(sequential=True, use_vocab=True, lower=True)
+    label_field = data.Field(sequential=True, use_vocab=False, lower=False)
+    fields=[ ('text', text_field), ('label', label_field) ]
 
-    # Generate masks
-    attention_masks = createAttnMask(embeddings, k = k)
+    # load your dataset using torchtext, e.g.
+    dataset = ds.SequenceTaggingDataset(examples=annotations_df, fields=fields )
 
-    # Pad the labels
-    labels = pad_sequences( annotations_df['labels'] , maxlen=MAX_LEN, value=0, padding="post")
-    labels = labels.tolist()
+    print( dataset[0] )
+    
 
-    return embeddings.tolist(), labels, attention_masks
+    return dataset, chosen_vector

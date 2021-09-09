@@ -288,7 +288,7 @@ def train(defModel, optimizer, scheduler, train_dataloader, development_dataload
             gc.collect()
 
             # Validation 
-            val_cr, all_pred_flat_coarse, all_GT_flat_coarse, cm, all_tokens_flat = evaluate(defModel, optimizer, scheduler, development_dataloader, args, exp_args, epoch_i)
+            val_cr, all_pred_flat_coarse, all_GT_flat_coarse, cm, all_tokens_flat, class_rep_temp  = evaluate(defModel, optimizer, scheduler, development_dataloader, args, exp_args, epoch_i)
             # val_meanF1_2 = val_cr['2']['f1-score']
             val_meanF1_1 = val_cr['1']['f1-score']
             val_meanF1_0 = val_cr['0']['f1-score']
@@ -299,7 +299,7 @@ def train(defModel, optimizer, scheduler, train_dataloader, development_dataload
 
             if val_meanF1_1 > best_meanf1:
                 print("Best validation mean F1 improved from {} to {} ...".format( best_meanf1, val_meanF1_1 ))
-                model_name_here = '/mnt/nas2/results/Results/systematicReview/Distant_CTO/models/intervention/0_EBM_baseline7linear/' + str(eachSeed) + '/bert_bilstm_crf_epoch_' + str(epoch_i) + '_best_model.pth'
+                model_name_here = '/mnt/nas2/results/Results/systematicReview/Distant_CTO/models/intervention/0_EBM_baseline7BiLSTMmasked/' + str(eachSeed) + '/bert_bilstm_crf_epoch_' + str(epoch_i) + '_best_model.pth'
                 print('Saving the best model for epoch {} with mean F1 score of {} '.format(epoch_i, val_meanF1_1 )) 
                 torch.save(defModel.state_dict(), model_name_here)
                 saved_models.append(model_name_here)                     
@@ -313,7 +313,7 @@ saved_models = []
 
 if __name__ == "__main__":
 
-    for eachSeed in [ 1 ]:
+    for eachSeed in [ 0, 1, 42 ]:
 
         def seed_everything( seed ):
             random.seed(seed)
@@ -483,16 +483,16 @@ if __name__ == "__main__":
         print('##################################################################################')
         print('Begin training...')
         print('##################################################################################')
-        # train(model, optimizer, scheduler, train_dataloader, test_dataloader, args, exp_args, eachSeed)
+        train(model, optimizer, scheduler, train_dataloader, test_dataloader, args, exp_args, eachSeed)
         print("Training and validation done in {} seconds".format(time.time() - st))
 
         print('##################################################################################')
         print('Begin test...')
         print('##################################################################################')
         # Load the last saved BEST model
-        # checkpoint = torch.load(saved_models[-1], map_location='cuda:0')
+        checkpoint = torch.load(saved_models[-1], map_location='cuda:0')
         # or load a from some checkpoint
-        checkpoint = torch.load('/mnt/nas2/results/Results/systematicReview/Distant_CTO/models/intervention/0_EBM_baseline7masked/1/bert_bilstm_crf_epoch_7_best_model.pth', map_location='cuda:0')
+        # checkpoint = torch.load('/mnt/nas2/results/Results/systematicReview/Distant_CTO/models/intervention/0_EBM_baseline7masked/1/bert_bilstm_crf_epoch_7_best_model.pth', map_location='cuda:0')
 
         # Load the checkpoint/state dict into the predefined model and parallelize
         model.load_state_dict( checkpoint )

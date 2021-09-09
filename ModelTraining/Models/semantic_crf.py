@@ -46,6 +46,8 @@ class SemanticCRF(nn.Module):
     def __init__(self):
         super(SemanticCRF, self).__init__()
 
+        
+
         # log reg
         self.hidden2tag = nn.Linear(300, 2)
 

@@ -19,3 +19,5 @@ def getRoc(testy, yhat):
     ix = np.argmax(J)
     best_thresh = thresholds[ix]
     print('Best Threshold=%f' % (best_thresh))
+
+    return best_thresh

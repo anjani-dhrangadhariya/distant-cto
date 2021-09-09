@@ -198,7 +198,7 @@ def FetchTrainingCandidates():
     parser = argparse.ArgumentParser()
     parser.add_argument('-embed', type = str, default = 'bert') # word2vec, bio2vec2, bio2vec30, bert, gpt2, biobert, scibert
     parser.add_argument('-embed_type', type = str, default = 'contextual') # semantic, contextual
-    parser.add_argument('-model', type = str, default = 'bertcrf') # semanticcrf, bertcrf, bertlinear, scibertcrf, scibertposcrf, scibertposlinear, scibertposattenlinear, scibertposattencrf, scibertposattenact
+    parser.add_argument('-model', type = str, default = 'bertbilstmcrf') # semanticcrf, bertcrf, bertlinear, scibertcrf, scibertposcrf, scibertposlinear, scibertposattenlinear, scibertposattencrf, scibertposattenact
     parser.add_argument('-label_type', type = str, default = 'seq_lab') # seq_lab, BIO, BIOES
     parser.add_argument('-text_level', type = str, default = 'document') # sentence, document
     parser.add_argument('-train_data', type = str, default = 'ebm') # distant-cto, combined, ebm
@@ -221,9 +221,25 @@ def FetchTrainingCandidates():
     if args.embed_type == 'semantic':
         
         MAX_LEN = 510 # Check the average MAX_LEN of the annotations and sentences in the training and test sets
-        # Semantic vectors fetched 
+
+        EBM_NLP_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/doc_annot2POS.txt'
+        testDf = readEBMNLP_docAnnot(EBM_NLP_sentences, args.label_type)
+
+        # EBM_NLPgold_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/ebmnlpgold_doc_annot2POS.txt'
+        EBM_NLPgold_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/allSentence_annot/ebmnlpgold_sent_annot2POS_posnegtrail.txt'
+        test1Df = readEBMNLP_sentAnnot(EBM_NLPgold_sentences, args.label_type)
+        print('Loading EBM-NLP training and test sentences completed...')
+
+        # hilfiker_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/hilfiker_doc_annot2POS.txt'
+        hilfiker_sentences = '/home/anjani/systematicReviews/data/TA_screening/EBM_NLP/allSentence_annot/hilfiker_sent_annot2POS_posnegtrail.txt'
+        test2Df = readEBMNLP_sentAnnot(hilfiker_sentences, args.label_type)
+        print('Loading in-house physiotherapy test sentences completed...')
+
+        # Get semantic vectors from all the datasets
         print('Extracting semantic embeddings from the text tokens...')
-        embeddings, labels, attention_masks = get_semantic_vectors(annotations_df, args.embed, MAX_LEN)
+        embeddings, labels, attention_masks, vector_chosen = get_semantic_vectors(annotations_df, args.embed, MAX_LEN)
+
+        return embeddings, labels, attention_masks, vector_chosen
 
     elif args.embed_type == 'contextual':
         print('Extracting contextual embeddings from the text tokens...')
