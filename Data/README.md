@@ -31,9 +31,7 @@ Each short target has its own `'targetname'` which is a list of tokens from the 
 
 ### Description for long targets
 
-Annotation for each long target in a JSON object is flanked by the `'_annot'` keyword. Each long target which is a paragraph is tokenized into sentences and each sentence is stored as an array under the long target JSON object. Each sentence array is further divided into three lists. List 0 is a list of tokens from the tokenized sentence, list 1 is a list containing annotation for each individual token from the tokenized sentence and list 3 is a list containing part-of-speech tags for each individual token from the tokenized sentence.
-
-An example of shown below.
+Annotation for each long target in a JSON object is flanked by the `'_annot'` keyword. Each long target which is a paragraph is tokenized into sentences and each sentence is stored as an array under the long target JSON object. Each sentence array is further divided into three lists. List 0 is a list of tokens from the tokenized sentence, list 1 is a list containing annotation for each individual token from the tokenized sentence and list 3 is a list containing part-of-speech tags for each individual token from the tokenized sentence. An example of shown below.
 
 
-![Example](https://github.com/anjani-dhrangadhariya/distant-cto/blob/main/Data/short_annot.jpg)
+![Example](https://github.com/anjani-dhrangadhariya/distant-cto/blob/main/Data/long_annot.jpg)
