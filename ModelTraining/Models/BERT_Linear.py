@@ -1,3 +1,11 @@
+'''
+Model with BERT as embedding layer followed by a linear decoder
+'''
+__author__ = "Anjani Dhrangadhariya"
+__maintainer__ = "Anjani Dhrangadhariya"
+__email__ = "anjani.k.dhrangadhariya@gmail.com"
+__status__ = "Prototype/Research"
+
 ##################################################################################
 # Imports
 ##################################################################################

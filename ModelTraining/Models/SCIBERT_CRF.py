@@ -1,3 +1,11 @@
+'''
+Model with SCIBERT as embedding layer and a final CRF decoder
+'''
+__author__ = "Anjani Dhrangadhariya"
+__maintainer__ = "Anjani Dhrangadhariya"
+__email__ = "anjani.k.dhrangadhariya@gmail.com"
+__status__ = "Prototype/Research"
+
 ##################################################################################
 # Imports
 ##################################################################################
