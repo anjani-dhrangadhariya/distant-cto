@@ -1,6 +1,22 @@
+'''
+Reads the validation and test annotation files
+'''
+__author__ = "Anjani Dhrangadhariya"
+__maintainer__ = "Anjani Dhrangadhariya"
+__email__ = "anjani.k.dhrangadhariya@gmail.com"
+__status__ = "Prototype/Research"
+
+##################################################################################
+# Imports
+##################################################################################
+# staple imports
+
 import json 
 import pandas as pd
 
+##################################################################################
+# Generates BIO style labels from IO style labels
+##################################################################################
 def labelGenerator(raw_labels):
 
     bio_labels = []
@@ -14,7 +30,10 @@ def labelGenerator(raw_labels):
 
     return bio_labels
 
-def readEBMNLP_docAnnot(EBMNLP_docAnnot, label_type):
+##################################################################################
+# Read 'document-level' annotations from the validation and test sets
+##################################################################################
+def readEBMNLP_docAnnot(docAnnot, label_type):
 
     print('Getting the sentence level annotations frm EBM-NLP....')
 
@@ -23,7 +42,7 @@ def readEBMNLP_docAnnot(EBMNLP_docAnnot, label_type):
     posList = []
     abstractIdentifiersList = []
     
-    with open(EBMNLP_docAnnot, 'r', encoding='latin1') as rf:
+    with open(docAnnot, 'r', encoding='latin1') as rf:
         for eachAbstract in rf:
             annot = json.loads(eachAbstract)
             abstract_identifier = annot.keys()
