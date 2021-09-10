@@ -167,8 +167,6 @@ class SCIBERTPOSAttenLinear(nn.Module):
 
         # log reg
         probablity = self.relu( self.hidden2tag( lstm_output ) )
-        max_probs = torch.max(probablity, dim=2) # get the highest of two probablities
-        logits = max_probs.indices.flatten()
  
         # Cross-entropy loss calculation
         masked_probs = torch.masked_select( probablity.view( (-1, 2) ) , mask.view((-1)).unsqueeze(-1) )
