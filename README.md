@@ -1,2 +1,2 @@
-# DISTANT-CTO Approach
+# `DISTANT-CTO`
 
