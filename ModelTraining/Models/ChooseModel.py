@@ -1,3 +1,7 @@
+'''
+Provides function to choose tokenizer and model for training on the loaded data
+'''
+
 ##################################################################################
 # Imports
 ##################################################################################
@@ -59,10 +63,12 @@ from Models.SCIBERTPOSATTEN_activation import SCIBERTPOSAttenActLin
 from Models.BERTBiLSTM_CRF import BERTBiLSTMCRF
 from Models.semantic_crf import SemanticCRF
 
+##################################################################################
+# The function loads the chosen tokenizer
+##################################################################################
+
 def choose_tokenizer_type(pretrained_model):
-    ##################################################################################
-    # Load the BERT tokenizer XXX Set tokenizer
-    ##################################################################################
+    
     print('Loading BERT tokenizer...')
     if 'bert' in pretrained_model and 'bio' not in pretrained_model and 'sci' not in pretrained_model:
         tokenizer_ = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
@@ -78,6 +84,9 @@ def choose_tokenizer_type(pretrained_model):
 
     return tokenizer_
 
+##################################################################################
+# The function loads the chosen model
+##################################################################################
 def choose_model(vector_type, pretrained_model, args):
 
     tokenizer = choose_tokenizer_type( vector_type )   
@@ -102,10 +111,9 @@ def choose_model(vector_type, pretrained_model, args):
         model = SCIBERTPOSAttenLinear(args.freeze_bert, tokenizer, args.gpu, args.bidrec)
     elif pretrained_model == 'scibertposattenact':
         model = SCIBERTPOSAttenActLin(args.freeze_bert, tokenizer, args.gpu, args.bidrec)
-    # elif pretrained_model == 'semanticcrf':
-    #     model = SemanticCRF(args.freeze_bert, tokenizer, args.gpu, args.bidrec)
+    elif pretrained_model == 'semanticcrf':
+        model = SemanticCRF(args.freeze_bert, tokenizer, args.gpu, args.bidrec)
     else:
         print('Please enter correct model name...')
-
 
     return model
