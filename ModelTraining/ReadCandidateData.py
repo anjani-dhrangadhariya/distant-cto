@@ -142,20 +142,6 @@ def readRawCandidates( list_NCT, extraction_number, label_type=None ):
                             length_examiner.append( len( eachValue[1] ) )
                             nct_ids.append(id_)
 
-                # if 'intervention_description_annot' in annot['aggregate_annot'].keys():
-                #     # iterate the dictionary
-                #     for eachKey, eachAnnot in enumerate(annot['aggregate_annot']['intervention_description_annot']):
-                #         raw_labels =  eachAnnot[1]
-                #         print(eachAnnot)
-                #         raw_tokens = eachAnnot[0]
-                #         if label_type == 'BIO':
-                #             raw_labels = labelGenerator(raw_labels)
-                #         tokens.append( raw_tokens )
-                #         labels.append( raw_labels)
-                #         pos.append( eachValue[2] )
-                #         length_examiner.append( len( eachValue[1] ) )
-                #         nct_ids.append(id_)
-
                 if 'intervention_description_annot' in annot['aggregate_annot'].keys():
                     # iterate the dictionary
                     for eachKey, eachValue in annot['aggregate_annot']['intervention_description_annot'].items():
@@ -175,7 +161,6 @@ def readRawCandidates( list_NCT, extraction_number, label_type=None ):
                 break
 
     # Collate the lists into a dataframe
-    # corpusDf = percentile_list = pd.DataFrame({'tokens': tokens,'labels': labels,'ids': nct_ids})
     corpusDf = percentile_list = pd.DataFrame({'tokens': tokens,'labels': labels, 'pos': pos}) 
     
     df = corpusDf.sample(frac=1).reset_index(drop=True) # Shuffles the dataframe after creation
@@ -196,12 +181,12 @@ def FetchTrainingCandidates():
 
     # List of arguments to set up experiment
     parser = argparse.ArgumentParser()
-    parser.add_argument('-embed', type = str, default = 'bert') # word2vec, bio2vec2, bio2vec30, bert, gpt2, biobert, scibert
-    parser.add_argument('-embed_type', type = str, default = 'contextual') # semantic, contextual
-    parser.add_argument('-model', type = str, default = 'bertbilstmcrf') # semanticcrf, bertcrf, bertlinear, scibertcrf, scibertposcrf, scibertposlinear, scibertposattenlinear, scibertposattencrf, scibertposattenact
-    parser.add_argument('-label_type', type = str, default = 'seq_lab') # seq_lab, BIO, BIOES
-    parser.add_argument('-text_level', type = str, default = 'document') # sentence, document
-    parser.add_argument('-train_data', type = str, default = 'ebm') # distant-cto, combined, ebm
+    parser.add_argument('-embed', type = str, default = 'bert') # embed = {scibert, bert, biobert, ...} 
+    parser.add_argument('-embed_type', type = str, default = 'contextual') # embed_type = {contextual, semantic} 
+    parser.add_argument('-model', type = str, default = 'scibertposattencrf') # model = {scibertposcrf, scibertposattencrf, ...} 
+    parser.add_argument('-label_type', type = str, default = 'seq_lab') # label_type = {seq_lab, BIO, BIOES, ...} 
+    parser.add_argument('-text_level', type = str, default = 'document') # text_level = {sentence, document} 
+    parser.add_argument('-train_data', type = str, default = 'distant-cto') # train_data = {distant-cto, combined} 
     parser.add_argument('-parallel', type = str, default = 'false') # false = won't use data parallel
     args = parser.parse_args()
 
