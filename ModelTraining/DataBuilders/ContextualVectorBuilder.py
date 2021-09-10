@@ -1,5 +1,5 @@
 '''
-Main python file for reading candidates generated during the candidate generation phase
+Module to preprocess the data for input to BERT based embeddings
 '''
 __author__ = "Anjani Dhrangadhariya"
 __maintainer__ = "Anjani Dhrangadhariya"
