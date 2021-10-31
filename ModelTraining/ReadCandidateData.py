@@ -161,7 +161,7 @@ def readRawCandidates( list_NCT, extraction_number, label_type=None ):
                 break
 
     # Collate the lists into a dataframe
-    corpusDf = percentile_list = pd.DataFrame({'tokens': tokens,'labels': labels, 'pos': pos}) 
+    corpusDf = pd.DataFrame({'tokens': tokens,'labels': labels, 'pos': pos}) 
     
     df = corpusDf.sample(frac=1).reset_index(drop=True) # Shuffles the dataframe after creation
     
