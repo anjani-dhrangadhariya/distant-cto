@@ -1,3 +1,11 @@
+'''
+Module to preprocess the data for input to BERT based embeddings
+'''
+__author__ = "Anjani Dhrangadhariya"
+__maintainer__ = "Anjani Dhrangadhariya"
+__email__ = "anjani.k.dhrangadhariya@gmail.com"
+__status__ = "Prototype/Research"
+
 ##################################################################################
 # Imports
 ##################################################################################
@@ -57,14 +65,8 @@ import matplotlib.pyplot as plt
 from tensorboardX import SummaryWriter
 
 ##################################################################################
-# Set all the seed values
+# Generates attention masks
 ##################################################################################
-seed_val = 42
-random.seed(seed_val)
-np.random.seed(seed_val)
-torch.manual_seed(seed_val)
-torch.cuda.manual_seed_all(seed_val)
-
 def createAttnMask(input_ids):
     # Add attention masks
     # Create attention masks
@@ -83,11 +85,12 @@ def createAttnMask(input_ids):
 
     return attention_masks
 
+##################################################################################
+# Load the chosen tokenizer
+##################################################################################
 def choose_tokenizer_type(pretrained_model):
-    ##################################################################################
-    # Load the BERT tokenizer XXX Set tokenizer
-    ##################################################################################
-    print('Loading BERT tokenizer...')
+    
+    print('Loading tokenizer...')
     if 'bert' in pretrained_model and 'bio' not in pretrained_model and 'sci' not in pretrained_model:
         tokenizer_ = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
 
@@ -102,12 +105,11 @@ def choose_tokenizer_type(pretrained_model):
 
     return tokenizer_
 
-# the function truncatedlist of lists to a max length and add special tokens
+##################################################################################
+# The function truncates input sequences to max lengths
+##################################################################################
 def truncateSentence(sentence, trim_len):
-    """
-    Truncates the sequence length to (MAX_LEN - 2). 
-    Negating 2 for the special tokens
-    """
+
     trimmedSentence = []
     if  len(sentence) > trim_len:
         trimmedSentence = sentence[:trim_len]
@@ -117,7 +119,9 @@ def truncateSentence(sentence, trim_len):
     assert len(trimmedSentence) <= trim_len
     return trimmedSentence
 
-# add the special tokens in the end of sequences
+##################################################################################
+# The function adds special tokens to the truncated sequences
+##################################################################################
 def addSpecialtokens(eachText, start_token, end_token):
     insert_at_start = 0
     eachText[insert_at_start:insert_at_start] = [start_token]
@@ -130,6 +134,9 @@ def addSpecialtokens(eachText, start_token, end_token):
 
     return eachText
 
+##################################################################################
+# The function generates subword tokens using the chosen tokenizer and adjusts labels accordingly
+##################################################################################
 def tokenize_and_preserve_labels(sentence, text_labels, pos, tokenizer, max_length, pretrained_model):
 
     """
@@ -212,16 +219,15 @@ def get_contextual_vectors(annotations_df, vector_type, pos_encoder, MAX_LEN):
     # Choose tokenizer here
     tokenizer = choose_tokenizer_type(vector_type)
 
-    # XXX Training set: tokenize, preserve labels, truncate, add special tokens and pad to the MAX_LEN_new
+    # Training set: tokenize, preserve labels, truncate, add special tokens and pad to the MAX_LEN_new
     tokenized = []
     for tokens, labels, pos in zip(list(annotations_df['tokens']), list(annotations_df['labels']), list(annotations_df['pos'])) :
         temp = tokenize_and_preserve_labels(tokens, labels, pos_encoder.transform(pos), tokenizer, MAX_LEN, vector_type)
         tokenized.append( temp ) # coarse labels for the training set
 
-
     tokens, labels, masks, poss = list(zip(*tokenized))
 
-    # Delete the tokenizer and tokenized list
+    # Delete the tokenizer and tokenized list to reduce RAM usage
     del tokenizer, tokenized
     gc.collect()
     

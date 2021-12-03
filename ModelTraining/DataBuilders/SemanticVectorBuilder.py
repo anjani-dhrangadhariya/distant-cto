@@ -1,3 +1,16 @@
+'''
+Main python file for reading candidates generated during the candidate generation phase
+'''
+__author__ = "Anjani Dhrangadhariya"
+__maintainer__ = "Anjani Dhrangadhariya"
+__email__ = "anjani.k.dhrangadhariya@gmail.com"
+__status__ = "Prototype/Research"
+
+##################################################################################
+# Imports
+##################################################################################
+# staple imports
+
 # Read the annotations into a dataframe
 import gensim
 import numpy as np

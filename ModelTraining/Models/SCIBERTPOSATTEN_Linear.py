@@ -1,3 +1,11 @@
+'''
+Model with SCIBERT as embedding layer followed by BiLSTM layer for inputs and POS (attention-weighted) and a final linear decoder
+'''
+__author__ = "Anjani Dhrangadhariya"
+__maintainer__ = "Anjani Dhrangadhariya"
+__email__ = "anjani.k.dhrangadhariya@gmail.com"
+__status__ = "Prototype/Research"
+
 ##################################################################################
 # Imports
 ##################################################################################
@@ -159,8 +167,6 @@ class SCIBERTPOSAttenLinear(nn.Module):
 
         # log reg
         probablity = self.relu( self.hidden2tag( lstm_output ) )
-        max_probs = torch.max(probablity, dim=2) # get the highest of two probablities
-        logits = max_probs.indices.flatten()
  
         # Cross-entropy loss calculation
         masked_probs = torch.masked_select( probablity.view( (-1, 2) ) , mask.view((-1)).unsqueeze(-1) )
