@@ -35,21 +35,21 @@ from Preprocessing import *
 from ExtractData import *
 from Scoring import *
 from Align import *
-from HeuristicLabelers.HeuristicLabel import *
+from HeuristicLabelers import *
 
 ################################################################################
 # Set the logger here
 ################################################################################
-LOG_FILE = os.getcwd() + "/logs"
-if not os.path.exists(LOG_FILE):
-    os.makedirs(LOG_FILE)
+# LOG_FILE = os.getcwd() + "/logs"
+# if not os.path.exists(LOG_FILE):
+#     os.makedirs(LOG_FILE)
 
-LOG_FILE = LOG_FILE + "/" + dt.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d %H_%M_%S') + ".log"
-logFormatter = logging.Formatter("%(levelname)s %(asctime)s %(processName)s %(message)s")
-fileHandler = logging.FileHandler("{0}".format(LOG_FILE))
-rootLogger = logging.getLogger()
-rootLogger.addHandler(fileHandler)
-rootLogger.setLevel(logging.INFO)
+# LOG_FILE = LOG_FILE + "/" + dt.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d %H_%M_%S') + ".log"
+# logFormatter = logging.Formatter("%(levelname)s %(asctime)s %(processName)s %(message)s")
+# fileHandler = logging.FileHandler("{0}".format(LOG_FILE))
+# rootLogger = logging.getLogger()
+# rootLogger.addHandler(fileHandler)
+# rootLogger.setLevel(logging.INFO)
 
 negative_sents = True
 MIN_TARGET_LENGTH = 5
@@ -142,7 +142,7 @@ results_gen = helpers.scan(
 match_scores = []
 intervention_types = []
 
-res = es.search(index="ctofull-index", body={"query": {"match_all": {}}}, size=10)
+res = es.search(index="ctofull-index", body={"query": {"match_all": {}}}, size=50)
 print('Total number of records retrieved: ', res['hits']['total']['value'])
 # for hit in results_gen: # XXX: Entire CTO
 for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search results from the CTO
@@ -155,6 +155,9 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
 
     try:
 
+        combined_targets = dict()
+        combined_sources = dict()
+
         protocol_section = fullstudy['ProtocolSection']
         derieved_section = fullstudy['DerivedSection']
 
@@ -164,22 +167,26 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
         # target 1: official title
         officialTitleTarget = getOfficialTitle(protocol_section)
         if officialTitleTarget:
-            officialTitleTarget = preprocess_targets(officialTitleTarget)
+            officialTitleTarget = preprocess_targets('officialTitleTarget', officialTitleTarget)
+            combined_targets.update(officialTitleTarget)
         
         # target 2: brief title
         briefTitleTarget = getBriefTitle(protocol_section)
         if briefTitleTarget:
-            briefTitleTarget = preprocess_targets(briefTitleTarget)
+            briefTitleTarget = preprocess_targets('briefTitleTarget', briefTitleTarget)
+            combined_targets.update(briefTitleTarget)
 
         # target 3: brief summary
         briefSummaryTarget = getBriefSummary(protocol_section)
         if briefSummaryTarget:
-            briefSummaryTarget = preprocess_targets(briefSummaryTarget)
+            briefSummaryTarget = preprocess_targets('briefSummaryTarget', briefSummaryTarget)
+            combined_targets.update(briefSummaryTarget)
 
         # target 4: detailed description
         detailedDescriptionTarget = getDetailedDescription(protocol_section)
         if detailedDescriptionTarget:
-            detailedDescriptionTarget = preprocess_targets(detailedDescriptionTarget)
+            detailedDescriptionTarget = preprocess_targets('detailedDescriptionTarget', detailedDescriptionTarget)
+            combined_targets.update(detailedDescriptionTarget)
 
 
         ################################################################################
@@ -202,7 +209,7 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
 
         intervention_counter = 0
         # XXX Each individual intervention term is iterated here
-        for eachInterventionSource in interventionSource:
+        for int_number, eachInterventionSource in enumerate(interventionSource):
           
             write_intervention = dict() # Write all the intervention annotations for any particular hit in this dictionary
           
@@ -222,26 +229,53 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
 
                 # Get POS-tag for each Intervention name
                 possed_interventionName = getPOStags( interventionName )
+                key = 'int_name_' + str(int_number)
+                combined_sources[key] = possed_interventionName
             else: 
                 interventionName = None
             
             # Source 1.2: Intervention Other name
-            if 'InterventionOtherName' in eachInterventionSource:
-                interventionOtherNames = eachInterventionSource['InterventionOtherName']
+            # print( eachInterventionSource )
+            if 'InterventionOtherNameList' in eachInterventionSource:
+                interventionOtherNames = eachInterventionSource['InterventionOtherNameList']['InterventionOtherName']
+                for num, syn in enumerate(interventionOtherNames):
+                    possed_syn = getPOStags( syn )
+                    key = 'int_syn_' + str(int_number) + '_' + str(num)
+                    combined_sources[key] = possed_syn
             else:
                 interventionOtherNames = None
 
             # target 5: intervention description
-            if 'interventiondescription' in eachInterventionSource:
-                interventionDescription = preprocess_targets( eachInterventionSource['interventiondescription'] )
+            if 'InterventionDescription' in eachInterventionSource:
+                interventionDescription = preprocess_targets('InterventionDescription', eachInterventionSource['InterventionDescription'] )
+                combined_targets.update(interventionDescription)
             else:
                 interventionDescription = None
 
+            for key_s, key_v in combined_sources.items():
+                
+                # Source
+                source_term = key_v['text'].lower()
 
-            if possed_interventionName is not None:
+                # Match this source term to each and every target
+                for key_t, value_t in combined_targets.items():
+                    
+                    target_term = value_t['text'].lower()
+
+                    # Match using Distant supervision
+
+                    # Match using ReGex
+                    regex_token, regex_annot = regexMatcher(value_t)
+                    print('done')
+
+                    # Match using Fuzzy Bigram match 
+
+            '''
+
+            # if possed_interventionName is not None:
 
                 # Source
-                interventionName = possed_interventionName['text'].lower()
+                # interventionName = possed_interventionName['text'].lower()
 
                 ####################################annotations​##################################################
                 # Candidate Generation 1: Only Intervention names
@@ -249,92 +283,110 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
                 ######################################################################################
                 # Match the source intervention to the official title
                 ######################################################################################
-                if officialTitleTarget is not None and len( officialTitleTarget['text'].split(' ') ) >= MIN_TARGET_LENGTH:
-                    officialTitleTarget_token, officialTitleTarget_annot = align_highconf_shorttarget(officialTitleTarget['text'], interventionName)
+                # if officialTitleTarget is not None and len( officialTitleTarget['text'].split(' ') ) >= MIN_TARGET_LENGTH:
+                #     officialTitleTarget_token, officialTitleTarget_annot = align_highconf_shorttarget(officialTitleTarget['text'], interventionName)
+                #     regex_token, regex_annot = regexMatcher(officialTitleTarget)
 
-                    regex_token, regex_annot = regexMatcher(officialTitleTarget)
+                #     # assert len(officialTitleTarget_token) == len(regex_token) == len(officialTitleTarget_annot) == len(regex_annot)
 
-                    if officialTitleTarget_annot:
-                        write_hit['aggregate_annot']['official_title'] = officialTitleTarget_token
-                        write_hit['aggregate_annot']['official_title_pos'] = [eachTuple[1]  for eachTuple in nltk.pos_tag_sents([officialTitleTarget_token])[0]]
-                        write_intervention['official_title'] = officialTitleTarget_token
-                        write_intervention['official_title_annot'] = officialTitleTarget_annot
-                        if not agrregateannot_officialTitleTarget:
-                            agrregateannot_officialTitleTarget.extend(officialTitleTarget_annot)
-                        elif agrregateannot_officialTitleTarget:
-                            for count, eachItem in enumerate(officialTitleTarget_annot):
-                                if eachItem == 1:
-                                    agrregateannot_officialTitleTarget[count] = 1
+                #     if officialTitleTarget_annot:
+                        
+                #         write_hit['aggregate_annot']['official_title'] = officialTitleTarget_token
+                #         write_hit['aggregate_annot']['official_title_pos'] = [eachTuple[1]  for eachTuple in nltk.pos_tag_sents([officialTitleTarget_token])[0]]
+                #         write_intervention['official_title'] = officialTitleTarget_token
+                #         write_intervention['official_title_annot'] = officialTitleTarget_annot
+                #         if not agrregateannot_officialTitleTarget:
+                #             agrregateannot_officialTitleTarget.extend(officialTitleTarget_annot)
+                #         elif agrregateannot_officialTitleTarget:
+                #             for count, eachItem in enumerate(officialTitleTarget_annot):
+                #                 if eachItem == 1:
+                #                     agrregateannot_officialTitleTarget[count] = 1
 
                 ######################################################################################
                 # Match the source intervention to the brief title
                 ######################################################################################
                 
-                if briefTitleTarget is not None and len( briefTitleTarget['text'].split(' ') ) >= MIN_TARGET_LENGTH:
-                    briefTitleTarget_token, briefTitleTarget_annot = align_highconf_shorttarget(briefTitleTarget['text'], interventionName)
+                # if briefTitleTarget is not None and len( briefTitleTarget['text'].split(' ') ) >= MIN_TARGET_LENGTH:
 
-                    if briefTitleTarget_annot:
-                        write_hit['aggregate_annot']['brief_title'] = briefTitleTarget_token
-                        write_hit['aggregate_annot']['brief_title_pos'] = [eachTuple[1]  for eachTuple in nltk.pos_tag_sents([briefTitleTarget_token])[0]]
-                        write_intervention['brief_title'] = briefTitleTarget_token
-                        write_intervention['brief_title_annot'] = briefTitleTarget_annot
-                        if not agrregateannot_briefTitleTarget:
-                            agrregateannot_briefTitleTarget.extend(briefTitleTarget_annot)
-                        elif agrregateannot_briefTitleTarget:
-                            for count, eachItem in enumerate(briefTitleTarget_annot):
-                                if eachItem == 1:
-                                    agrregateannot_briefTitleTarget[count] = 1
+                #     briefTitleTarget_token, briefTitleTarget_annot = align_highconf_shorttarget(briefTitleTarget['text'], interventionName)
+                #     regex_token, regex_annot = regexMatcher(briefTitleTarget)
+
+                #     if briefTitleTarget_annot:
+                #         write_hit['aggregate_annot']['brief_title'] = briefTitleTarget_token
+                #         write_hit['aggregate_annot']['brief_title_pos'] = [eachTuple[1]  for eachTuple in nltk.pos_tag_sents([briefTitleTarget_token])[0]]
+                #         write_intervention['brief_title'] = briefTitleTarget_token
+                #         write_intervention['brief_title_annot'] = briefTitleTarget_annot
+                #         if not agrregateannot_briefTitleTarget:
+                #             agrregateannot_briefTitleTarget.extend(briefTitleTarget_annot)
+                #         elif agrregateannot_briefTitleTarget:
+                #             for count, eachItem in enumerate(briefTitleTarget_annot):
+                #                 if eachItem == 1:
+                #                     agrregateannot_briefTitleTarget[count] = 1
 
                 ######################################################################################
                 # Match the source intervention to the intervention description
                 ######################################################################################  
                
-                if interventionDescription is not None and len( interventionDescription['text'].split(' ') ) >= MIN_TARGET_LENGTH:
-                    interventionDescription_annot_ = align_highconf_longtarget(interventionDescription['text'], interventionName)
+                # if interventionDescription is not None and len( interventionDescription['text'].split(' ') ) >= MIN_TARGET_LENGTH:
+                #     interventionDescription_annot_ = align_highconf_longtarget(interventionDescription['text'], interventionName)
+                #     regex_token, regex_annot = regexMatcher(interventionDescription)
+                    
+                #     interventionDescription_annot = dict()
+                #     for key, value in interventionDescription_annot_.items():
+                #         if len(value[0]) >= 1:
+                #             interventionDescription_annot[key] = value
 
-                    interventionDescription_annot = dict()
-                    for key, value in interventionDescription_annot_.items():
-                        if len(value[0]) >= 1:
-                            interventionDescription_annot[key] = value
-
-                    if interventionDescription_annot:
-                        if 'interventionDescription_annot' not in write_intervention:
-                            write_intervention['interventionDescription_annot'] = [interventionDescription_annot]
-                            agrregateannot_interventionDescription.append( interventionDescription_annot )
-                        elif 'interventionDescription_annot' in write_intervention:
-                            write_intervention['interventionDescription_annot'].append(interventionDescription_annot)
-                            agrregateannot_interventionDescription.append( interventionDescription_annot )
+                #     if interventionDescription_annot:
+                #         if 'interventionDescription_annot' not in write_intervention:
+                #             write_intervention['interventionDescription_annot'] = [interventionDescription_annot]
+                #             agrregateannot_interventionDescription.append( interventionDescription_annot )
+                #         elif 'interventionDescription_annot' in write_intervention:
+                #             write_intervention['interventionDescription_annot'].append(interventionDescription_annot)
+                #             agrregateannot_interventionDescription.append( interventionDescription_annot )
 
                 ######################################################################################
                 # Match the source intervention to the brief summary
                 ######################################################################################
-                if briefSummaryTarget is not None and len( briefSummaryTarget['text'].split(' ') ) >= MIN_TARGET_LENGTH:
-                    briefSummaryTarget_annot = align_highconf_longtarget_negSent(briefSummaryTarget['text'], interventionName)
-                    if briefSummaryTarget_annot:
-                        if 'brief_summary_annot' not in write_intervention:
-                            write_intervention['brief_summary_annot'] = [briefSummaryTarget_annot]
-                            agrregateannot_briefSummary.append( briefSummaryTarget_annot )
-                        elif 'brief_summary_annot' in write_intervention:
-                            write_intervention['brief_summary_annot'].append(briefSummaryTarget_annot)
-                            agrregateannot_briefSummary.append( briefSummaryTarget_annot )
+                # if briefSummaryTarget is not None:
+
+                #     briefSummaryTarget_annot = align_highconf_longtarget_negSent(briefSummaryTarget['text'], interventionName)
+                #     regex_token, regex_annot = regexMatcher(briefSummaryTarget)
+
+                #     if briefSummaryTarget_annot:
+
+                #         # print('--------------------------------------------------------------------')
+
+                #         lol = sum([len(v[0]) for k,v in briefSummaryTarget_annot.items()])
+
+                #         # print(lol , len(regex_token), len(regex_annot) )
+
+                #         # print( regex_token )
+                #         # for k,v in briefSummaryTarget_annot.items():
+                #         #     print( v[0] )
+
+                #         if 'brief_summary_annot' not in write_intervention:
+                #             write_intervention['brief_summary_annot'] = [briefSummaryTarget_annot]
+                #             agrregateannot_briefSummary.append( briefSummaryTarget_annot )
+                #         elif 'brief_summary_annot' in write_intervention:
+                #             write_intervention['brief_summary_annot'].append(briefSummaryTarget_annot)
+                #             agrregateannot_briefSummary.append( briefSummaryTarget_annot )
 
                 ######################################################################################
                 # Match the source intervention to the detailed description
                 ######################################################################################
-                if detailedDescriptionTarget is not None and len( detailedDescriptionTarget['text'].split(' ') ) >= MIN_TARGET_LENGTH:
-                    detailedDescriptionTarget_annot = align_highconf_longtarget_negSent(detailedDescriptionTarget['text'], interventionName)
-                    if detailedDescriptionTarget_annot:
-                        write_intervention['detailed_description_annot'] = [detailedDescriptionTarget_annot]
-                        agrregateannot_detailedDescription.append( detailedDescriptionTarget_annot )
-                    elif 'detailed_description_annot' in write_intervention:
-                        write_intervention['detailed_description_annot'].append(detailedDescriptionTarget_annot)
-                        agrregateannot_detailedDescription.append( detailedDescriptionTarget_annot )
+                # if detailedDescriptionTarget is not None and len( detailedDescriptionTarget['text'].split(' ') ) >= MIN_TARGET_LENGTH:
+                #     detailedDescriptionTarget_annot = align_highconf_longtarget_negSent(detailedDescriptionTarget['text'], interventionName)
+                #     if detailedDescriptionTarget_annot:
+                #         write_intervention['detailed_description_annot'] = [detailedDescriptionTarget_annot]
+                #         agrregateannot_detailedDescription.append( detailedDescriptionTarget_annot )
+                #     elif 'detailed_description_annot' in write_intervention:
+                #         write_intervention['detailed_description_annot'].append(detailedDescriptionTarget_annot)
+                #         agrregateannot_detailedDescription.append( detailedDescriptionTarget_annot )
 
                 # The main intervention term is tackled. Now tackle the intervention synonyms...
                 #####################################################################################
                 #  Candidate Generation 2: Intervention other names
                 #####################################################################################
-
                 if interventionOtherNames:
 
                     interventionSynonyms = interventionOtherNames['interventionothername']
@@ -428,14 +480,16 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
                                     # tempAnnot = write_intervention['detailed_description_annot']
                                     # agrregateannot_detailedDescription.append(tempAnnot)
                         
-
+                        
                         # Add to the "write_intervention" here
                         subInterventionCounter = 'syn_' + str(i)
                         write_intervention[subInterventionCounter] = write_intervention_syn
+            
 
                 # # Write the intervention section to the hit dictionary
                 write_hit['extraction1'][intervention_counter] = write_intervention
 
+            
             if agrregateannot_officialTitleTarget:
                 write_hit['aggregate_annot']['official_title_annot'] = agrregateannot_officialTitleTarget
 
@@ -467,8 +521,10 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
                 if detailedDescription_aggdict:
                     write_hit['aggregate_annot']['detailed_description_annot'] = detailedDescription_aggdict
 
-        logNCTID = 'Writing ID: ' + NCT_id
-        logging.info(logNCTID)
+            '''
+
+        # logNCTID = 'Writing ID: ' + NCT_id
+        # logging.info(logNCTID)
         # with open(file_write_trial, 'a+') as wf:
         #     wf.write('\n')
         #     json_str = json.dumps(write_hit)
@@ -486,5 +542,5 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
 
         print(traceback.format_exc())
 
-        logNCTID = 'Caused exception at the NCT ID: ' + NCT_id
-        logging.info(logNCTID)
+        # logNCTID = 'Caused exception at the NCT ID: ' + NCT_id
+        # logging.info(logNCTID)
