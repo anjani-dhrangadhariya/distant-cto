@@ -48,7 +48,7 @@ def getArmsGroups(protocol_section):
             if 'ArmGroup' in protocol_section['ArmsInterventionsModule']['ArmGroupList']:
                 armGroup = protocol_section['ArmsInterventionsModule']['ArmGroupList']['ArmGroup']
                 for eachArmGroup in armGroup:
-                    if 'ArmGroupLabel' in eachArmGroup:
+                    if 'ArmGroupLabel' in eachArmGroup and len(eachArmGroup['ArmGroupLabel']) > 3:
                         armgrouplabels.append(eachArmGroup['ArmGroupLabel'])
 
     return armgrouplabels
