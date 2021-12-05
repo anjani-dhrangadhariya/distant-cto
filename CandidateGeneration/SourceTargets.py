@@ -142,7 +142,7 @@ results_gen = helpers.scan(
 match_scores = []
 intervention_types = []
 
-res = es.search(index="ctofull-index", body={"query": {"match_all": {}}}, size=50)
+res = es.search(index="ctofull-index", body={"query": {"match_all": {}}}, size=3000)
 print('Total number of records retrieved: ', res['hits']['total']['value'])
 # for hit in results_gen: # XXX: Entire CTO
 for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search results from the CTO
@@ -224,24 +224,20 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
             # Source 1.1: Intervention Name
             if 'InterventionName' in eachInterventionSource:
                 interventionName = eachInterventionSource['InterventionName']
-                interventionName = interventionName.replace('-', '')
                 write_intervention['intervention_name'] = interventionName
 
-                # Get POS-tag for each Intervention name
-                possed_interventionName = getPOStags( interventionName )
-                key = 'int_name_' + str(int_number)
-                combined_sources[key] = possed_interventionName
+                possed_interventionName = preprocess_sources('int_name_', int_number, interventionName)
+                combined_sources.update(possed_interventionName)
+
             else: 
                 interventionName = None
             
             # Source 1.2: Intervention Other name
-            # print( eachInterventionSource )
             if 'InterventionOtherNameList' in eachInterventionSource:
                 interventionOtherNames = eachInterventionSource['InterventionOtherNameList']['InterventionOtherName']
                 for num, syn in enumerate(interventionOtherNames):
-                    possed_syn = getPOStags( syn )
-                    key = 'int_syn_' + str(int_number) + '_' + str(num)
-                    combined_sources[key] = possed_syn
+                    possed_syn = preprocess_sources('int_syn_', str(int_number) + '_' + str(num), syn)
+                    combined_sources.update(possed_syn)
             else:
                 interventionOtherNames = None
 
@@ -252,25 +248,33 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
             else:
                 interventionDescription = None
 
-            for key_s, key_v in combined_sources.items():
+
+            '''
+
+            for key_s, value_s in combined_sources.items():
                 
                 # Source
-                source_term = key_v['text'].lower()
+                source_term = value_s['text'].lower()
 
                 # Match this source term to each and every target
                 for key_t, value_t in combined_targets.items():
                     
                     target_term = value_t['text'].lower()
 
-                    # Match using Distant supervision
+                    # Match using Distant supervision (confidence score)
+                    annotated_target = align_highconf_shorttarget(value_t, source_term)
 
                     # Match using ReGex
                     regex_token, regex_annot = regexMatcher(value_t)
-                    print('done')
+                    if annotated_target:
+                        assert len(regex_annot) == len(annotated_target['annotation'])
+
+                    if len(value_s['tokens']) >= 6:
+                        print( value_s['text'] )
 
                     # Match using Fuzzy Bigram match 
 
-            '''
+
 
             # if possed_interventionName is not None:
 
