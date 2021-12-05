@@ -150,13 +150,18 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
     write_hit['id'] = NCT_id
 
     try:
+
+        ################################################################################
+        # Initialize annotation dictionaries
+        ################################################################################
         combined_annot_ds = dict()
         combined_annot_regex = dict()
         combined_annot_fuzzy = dict()
         combined_annot_np = dict()
 
-        combined_annot_ds_all = dict()
-        combined_annot_regex_all = dict()
+        combined_annot_ds_np = dict()
+        combined_annot_ds_np_fuzz = dict()
+        combined_annot_all = dict()
 
         combined_targets = dict()
         combined_sources = dict()
@@ -167,7 +172,7 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
         derieved_section = fullstudy['DerivedSection']
 
         ################################################################################
-        # Get and preprocess targets (XXX targets are singular unstructured strings)
+        # Get and preprocess targets
         ################################################################################
         # target 1: official title
         officialTitleTarget = getOfficialTitle(protocol_section)
@@ -246,13 +251,13 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
             combined_annot_fuzzy[key_t] = value_t; combined_annot_fuzzy[key_t]['annot'] = {}
             combined_annot_np[key_t] = value_t; combined_annot_np[key_t]['annot'] = {}
 
-            combined_annot_ds_all[key_t] = value_t
-            combined_annot_regex_all[key_t] = value_t
+            combined_annot_ds_np[key_t] = value_t; combined_annot_ds_np[key_t]['annot'] = {}
+            combined_annot_ds_np_fuzz[key_t] = value_t; combined_annot_ds_np_fuzz[key_t]['annot'] = {}
+            combined_annot_all[key_t] = value_t; combined_annot_ds_np_fuzz[key_t]['annot'] = {}
 
         # LF1: DS labeler, LF2: Heuristic ReGeX labeler
         for key_s, value_s in combined_sources.items():
             
-            # Source
             source_term = value_s['text'].lower()
           
             # Match this source term to each and every target
@@ -264,11 +269,10 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
                 ds_token, ds_annot = align_highconf_shorttarget(value_t, source_term)
 
                 if ds_annot:
-                    if 'ds' not in combined_annot_ds[key_t]['annot']:
-                        combined_annot_ds[key_t]['annot']['ds'] = ds_annot
-                    else:
-                        merge_to = combined_annot_ds[key_t]['annot']['ds']
-                        combined_annot_ds[key_t]['annot']['ds'] =  mergeOldNew( merge_to, ds_annot )
+                    combined_annot_ds = mergeOldNew(combined_annot_ds, key_t, 'ds', ds_annot)
+                    combined_annot_ds_np = mergeOldNew(combined_annot_ds_np, key_t, 'ds_np', ds_annot)
+                    combined_annot_ds_np_fuzz = mergeOldNew(combined_annot_ds_np_fuzz, key_t, 'ds_np_fuzz', ds_annot)
+                    combined_annot_all = mergeOldNew(combined_annot_all, key_t, 'all', ds_annot)
 
                 # LF2 Match using ReGeX
                 regex_token, regex_annot = regexMatcher(value_t)
@@ -276,17 +280,13 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
                     assert len(regex_annot) == len(ds_annot)
 
                 if regex_annot:
-                    if 'regex' not in combined_annot_regex[key_t]['annot']:
-                        combined_annot_regex[key_t]['annot']['regex'] = regex_annot
-                    else:
-                        merge_to = combined_annot_regex[key_t]['annot']['regex']
-                        combined_annot_regex[key_t]['annot']['regex'] =  mergeOldNew( merge_to, ds_annot )
+                    combined_annot_regex = mergeOldNew(combined_annot_regex, key_t, 'regex', regex_annot)
+                    combined_annot_all = mergeOldNew(combined_annot_all, key_t, 'all', regex_annot)
 
 
         # LF3: Noun chunk labeler
         for key_s, value_s in combined_np_sources.items():
             
-            # Source
             source_term = value_s['text'].lower()
 
             # Match this source term to each and every target
@@ -298,17 +298,15 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
                 np_ds_token, np_ds_annot = align_highconf_shorttarget(value_t, source_term)
 
                 if np_ds_annot:
-                    if 'np' not in combined_annot_np[key_t]['annot']:
-                        combined_annot_np[key_t]['annot']['np'] = np_ds_annot
-                    else:
-                        merge_to = combined_annot_np[key_t]['annot']['np']
-                        combined_annot_np[key_t]['annot']['np'] =  mergeOldNew( merge_to, ds_annot )
+                    combined_annot_np = mergeOldNew(combined_annot_np, key_t, 'np', np_ds_annot)
+                    combined_annot_ds_np = mergeOldNew(combined_annot_ds_np, key_t, 'ds_np', np_ds_annot)
+                    combined_annot_ds_np_fuzz = mergeOldNew(combined_annot_ds_np_fuzz, key_t, 'ds_np_fuzz', np_ds_annot)
+                    combined_annot_all = mergeOldNew(combined_annot_all, key_t, 'all', np_ds_annot)
 
 
         # LF4: Fuzzy Bigram labeler
         for key_s, value_s in combined_bgm_sources.items():
             
-            # Source
             source_term = value_s['text'].lower()
 
             # Match this source term to each and every target
@@ -320,54 +318,9 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
                 bgm_ds_token, bgm_ds_annot = align_highconf_shorttarget(value_t, source_term)
 
                 if bgm_ds_annot:
-                    if 'fuzzy' not in combined_annot_fuzzy[key_t]['annot']:
-                        combined_annot_fuzzy[key_t]['annot']['fuzzy'] = bgm_ds_annot
-                    else:
-                        merge_to = combined_annot_fuzzy[key_t]['annot']['fuzzy']
-                        combined_annot_fuzzy[key_t]['annot']['fuzzy'] =  mergeOldNew( merge_to, ds_annot )
-                        
-                        
-                        # Add to the "write_intervention" here
-                        subInterventionCounter = 'syn_' + str(i)
-                        write_intervention[subInterventionCounter] = write_intervention_syn
-            
-
-                # # Write the intervention section to the hit dictionary
-                write_hit['extraction1'][intervention_counter] = write_intervention
-
-            
-            if agrregateannot_officialTitleTarget:
-                write_hit['aggregate_annot']['official_title_annot'] = agrregateannot_officialTitleTarget
-
-            if agrregateannot_briefTitleTarget:
-                write_hit['aggregate_annot']['brief_title_annot'] = agrregateannot_briefTitleTarget
-
-            if agrregateannot_interventionDescription:
-                interventionDescription_aggdict = aggregateLongTarget_annot(agrregateannot_interventionDescription)
-                if interventionDescription_aggdict:
-                    write_hit['aggregate_annot']['intervention_description_annot'] = interventionDescription_aggdict
-
-            if agrregateannot_briefSummary:
-                briefsummary_aggdict = aggregateLongTarget_annot(agrregateannot_briefSummary)
-                
-                # Mix/merge the aggregated dictionary for +- training
-                if negative_sents == True:
-                    briefsummary_aggdict = pos_neg_trail( briefsummary_aggdict )
-
-                if briefsummary_aggdict:
-                    write_hit['aggregate_annot']['brief_summary_annot'] = briefsummary_aggdict
-
-            if agrregateannot_detailedDescription:
-                detailedDescription_aggdict = aggregateLongTarget_annot(agrregateannot_detailedDescription)
-
-                # Mix/merge the aggregated dictionary for +- training
-                if negative_sents == True:
-                    detailedDescription_aggdict = pos_neg_trail( detailedDescription_aggdict )
-
-                if detailedDescription_aggdict:
-                    write_hit['aggregate_annot']['detailed_description_annot'] = detailedDescription_aggdict
-
-            '''
+                    combined_annot_fuzzy = mergeOldNew(combined_annot_fuzzy, key_t, 'fuzzy', bgm_ds_annot)
+                    combined_annot_ds_np_fuzz = mergeOldNew(combined_annot_ds_np_fuzz, key_t, 'ds_np_fuzz', bgm_ds_annot)
+                    combined_annot_all = mergeOldNew(combined_annot_all, key_t, 'all', bgm_ds_annot)
 
         # logNCTID = 'Writing ID: ' + NCT_id
         # logging.info(logNCTID)
