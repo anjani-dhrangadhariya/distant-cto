@@ -31,7 +31,9 @@ def getArmsGroups(protocol_section):
         if 'ArmGroupList' in protocol_section['ArmsInterventionsModule']:
             if 'ArmGroup' in protocol_section['ArmsInterventionsModule']['ArmGroupList']:
                 armGroup = protocol_section['ArmsInterventionsModule']['ArmGroupList']['ArmGroup']
-                return armGroup
+                for eachArmGroup in armGroup:
+                    if 'ArmGroupLabel' in eachArmGroup:
+                        yield eachArmGroup['ArmGroupLabel']
 
 ################################################################################
 # --------------------------------    Targets   --------------------------------
