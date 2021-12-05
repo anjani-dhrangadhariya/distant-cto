@@ -118,8 +118,8 @@ def preprocess_targets(target_nomen, s):
 
     targets = dict()
     
-    modified_s = removeSpaceTrailsString(s)
-    modified_s = removeHyphenString(modified_s) 
+    # modified_s = removeSpaceTrailsString(s)
+    modified_s = removeHyphenString(s) 
     modified_s = clean_unicide(modified_s)
 
     doc = nlp(modified_s)
@@ -135,8 +135,8 @@ def preprocess_sources(source_nomen, counter, s):
 
     sources = dict()
 
-    modified_s = removeHyphenString(s)
-    modified_s = clean_unicide(modified_s)
+    # modified_s = removeHyphenString(s)
+    modified_s = clean_unicide(s)
 
     detected_abb = fetchAcronyms(modified_s)
 
@@ -150,7 +150,7 @@ def preprocess_sources(source_nomen, counter, s):
 
     return sources
 
-def preproces_np(int_with_np, counter_key):
+def preprocess_np(int_with_np, counter_key):
 
     possed_interventionNounChunk = dict()
 
