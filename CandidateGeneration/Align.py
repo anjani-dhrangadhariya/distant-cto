@@ -117,10 +117,12 @@ def align_highconf_shorttarget(target, source):
         matches = fullMatchScore(s, source, target_term)
         for match in matches:
             if match[0] == 1.0:               
-                # token, annot = extractAnnotation(source, target, match)
                 annotated_target = extract( source, target_term, target, match )
 
-    return annotated_target
+    if annotated_target:
+        return annotated_target['tokens'], annotated_target['annotation']
+    else:
+        return token, annot
 
 ###############################################################################################
 # Function to align source intervention terms with high confidence long targets
@@ -187,7 +189,6 @@ def align_highconf_longtarget_negSent(target, source):
                         token_i, annot_i = extractAnnotation(source, eachSentence, match)
                         annot.extend( annot_i )
                         token.extend( token_i )
-                        # print('MATCH 1 sentence' + str(i))
 
             if annot:
                 token_annot = [token, annot, [eachTuple[1]  for eachTuple in nltk.pos_tag_sents([token])[0]]]
