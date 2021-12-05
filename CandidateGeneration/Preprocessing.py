@@ -199,7 +199,7 @@ def getBigrams(intervention_term):
 
     if detected_abb:
         for i, abb in enumerate(detected_abb):
-            if len(abb.split(' ')) > 3:
+            if len(abb.split(' ')) >= 3:
                 # remove punctuation
                 punct_stripped = removePunct(abb)
                 modified_term = removeSpaceTrailsString(punct_stripped)
