@@ -14,18 +14,34 @@ __status__ = "Prototype/Research"
 ################################################################################
 # --------------------------------    Sources   --------------------------------
 ################################################################################
-
-def getInterventionNames(protocol_section):
+def getInterventionSource(protocol_section):
     # Check if the protocol section has interventions list
     if 'ArmsInterventionsModule' in protocol_section:
         if 'InterventionList' in protocol_section['ArmsInterventionsModule']:
             if 'Intervention' in protocol_section['ArmsInterventionsModule']['InterventionList']:
                 intervention = protocol_section['ArmsInterventionsModule']['InterventionList']['Intervention']
-                # print(intervention)
                 for eachIntervention in intervention:
                     yield eachIntervention
 
+def getInterventionNames(protocol_section):
+    interventions = []
+    intervention_syn = []
+
+    # Check if the protocol section has interventions list
+    if 'ArmsInterventionsModule' in protocol_section:
+        if 'InterventionList' in protocol_section['ArmsInterventionsModule']:
+            if 'Intervention' in protocol_section['ArmsInterventionsModule']['InterventionList']:
+                intervention = protocol_section['ArmsInterventionsModule']['InterventionList']['Intervention']
+                for eachIntervention in intervention:
+                    if 'InterventionName' in eachIntervention:
+                        interventions.append( eachIntervention['InterventionName'] )
+                    if 'InterventionOtherName' in eachIntervention:
+                        intervention_syn.append( eachIntervention['InterventionOtherName'] )
+
+    return interventions, intervention_syn
+
 def getArmsGroups(protocol_section):
+    armgrouplabels = []
     # Check if the protocol section has arm groups list
     if 'ArmsInterventionsModule' in protocol_section:
         if 'ArmGroupList' in protocol_section['ArmsInterventionsModule']:
@@ -33,7 +49,9 @@ def getArmsGroups(protocol_section):
                 armGroup = protocol_section['ArmsInterventionsModule']['ArmGroupList']['ArmGroup']
                 for eachArmGroup in armGroup:
                     if 'ArmGroupLabel' in eachArmGroup:
-                        yield eachArmGroup['ArmGroupLabel']
+                        armgrouplabels.append(eachArmGroup['ArmGroupLabel'])
+
+    return armgrouplabels
 
 ################################################################################
 # --------------------------------    Targets   --------------------------------
