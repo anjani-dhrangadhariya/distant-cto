@@ -149,7 +149,13 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
     write_hit['id'] = NCT_id
 
     try:
-        combined_annot = dict()
+        combined_annot_ds = dict()
+        combined_annot_regex = dict()
+        combined_annot_fuzzy = dict()
+        combined_annot_np = dict()
+
+        combined_annot_ds_all = dict()
+        combined_annot_regex_all = dict()
 
         combined_targets = dict()
         combined_sources = dict()
@@ -213,7 +219,7 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
         agrregateannot_briefTitleTarget = []
         agrregateannot_interventionDescription = []
         agrregateannot_briefSummary = []
-        agrregateannot_detailedDescription = [] 
+        agrregateannot_detailedDescription = []
 
         # Process each individual intervention term here. (Abbreviation identification, POS tagging, NP identification, BiGram identification)
         for int_number, eachInterventionTerm in enumerate(interventionSource):
@@ -227,16 +233,27 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
                 combined_np_sources.update( possed_np )
 
             # Fetch Bigrams
-            if len(eachInterventionTerm.split(' ')) > 3:
+            if len(eachInterventionTerm.split(' ')) >= 3:
                 bigrams = getBigrams( eachInterventionTerm )
                 if bigrams:
                     combined_bgm_sources.update( bigrams )
+
+        # Add all the targets to the final annotation dictionary:
+        for key_t, value_t in combined_targets.items():
+            combined_annot_ds[key_t] = value_t
+            combined_annot_regex[key_t] = value_t
+            combined_annot_fuzzy[key_t] = value_t
+            combined_annot_np[key_t] = value_t
+
+            combined_annot_ds_all[key_t] = value_t
+            combined_annot_regex_all[key_t] = value_t
 
         # LF1: DS labeler, LF2: Heuristic ReGeX labeler
         for key_s, value_s in combined_sources.items():
             
             # Source
             source_term = value_s['text'].lower()
+          
 
             # Match this source term to each and every target
             for key_t, value_t in combined_targets.items():
