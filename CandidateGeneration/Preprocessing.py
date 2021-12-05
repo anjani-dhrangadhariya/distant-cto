@@ -78,7 +78,7 @@ def getPOStags(value):
     is_alpha = [ token.is_alpha for token in doc ]
     is_stop = [ token.is_stop for token in doc ]
     char_offsets = [token.idx for token in doc]
-    noun_chunks = list(doc.noun_chunks)
+    noun_chunks = [str(chunk) for chunk in doc.noun_chunks]
 
     assert len( char_offsets ) == len( tokens )
 
@@ -149,3 +149,16 @@ def preprocess_sources(source_nomen, counter, s):
         sources[key] = getPOStags( str(modified_s) )
 
     return sources
+
+def preproces_np(int_with_np, counter_key):
+
+    possed_interventionNounChunk = dict()
+
+    for k,v in int_with_np.items():
+        if 'noun_chunks' in v and len(v['noun_chunks']) >= 2:
+            for chunk_number, chunk in enumerate(v['noun_chunks']):
+                key = str(counter_key) + '_' + str(chunk_number)
+                chunk_possed = preprocess_sources('np_', key, chunk)
+                possed_interventionNounChunk.update( chunk_possed )
+    
+    return possed_interventionNounChunk

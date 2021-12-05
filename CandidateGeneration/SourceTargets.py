@@ -57,11 +57,6 @@ MIN_TARGET_LENGTH = 5
 ################################################################################
 # Local functions
 ################################################################################
-# Partitiion a list
-# def partition(list_in, n):
-#     # random.shuffle(list_in)
-#     return [list_in[i::n] for i in range(n)]
-
 def partition(lst, n):
     """Return successive n-sized chunks from list (lst)."""
     chunks = []
@@ -140,9 +135,8 @@ results_gen = helpers.scan(
 )
 
 match_scores = []
-intervention_types = []
 
-res = es.search(index="ctofull-index", body={"query": {"match_all": {}}}, size=3000)
+res = es.search(index="ctofull-index", body={"query": {"match_all": {}}}, size=30)
 print('Total number of records retrieved: ', res['hits']['total']['value'])
 # for hit in results_gen: # XXX: Entire CTO
 for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search results from the CTO
@@ -157,6 +151,7 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
 
         combined_targets = dict()
         combined_sources = dict()
+        combined_np_sources = dict()
 
         protocol_section = fullstudy['ProtocolSection']
         derieved_section = fullstudy['DerivedSection']
@@ -219,7 +214,6 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
             # Intervention type 
             interventionType = eachInterventionSource['InterventionType']
             write_intervention['intervention_type'] = interventionType
-            intervention_types.append(interventionType)
 
             # Source 1.1: Intervention Name
             if 'InterventionName' in eachInterventionSource:
@@ -228,29 +222,29 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
 
                 possed_interventionName = preprocess_sources('int_name_', int_number, interventionName)
                 combined_sources.update(possed_interventionName)
+                possed_np = preproces_np(possed_interventionName, int_number)
+                if possed_np:
+                    combined_np_sources.update( possed_np )
 
-            else: 
-                interventionName = None
-            
             # Source 1.2: Intervention Other name
             if 'InterventionOtherNameList' in eachInterventionSource:
                 interventionOtherNames = eachInterventionSource['InterventionOtherNameList']['InterventionOtherName']
-                for num, syn in enumerate(interventionOtherNames):
-                    possed_syn = preprocess_sources('int_syn_', str(int_number) + '_' + str(num), syn)
+                for syn_number, syn in enumerate(interventionOtherNames):
+                    id = str(int_number) + '_' + str(syn_number)
+                    possed_syn = preprocess_sources('int_syn_', id, syn)
                     combined_sources.update(possed_syn)
-            else:
-                interventionOtherNames = None
+
+                    possed_syn_np = preproces_np(possed_syn, str(int_number) + '_' + str(syn_number))
+                    if possed_syn_np:
+                        combined_np_sources.update( possed_syn_np )
 
             # target 5: intervention description
             if 'InterventionDescription' in eachInterventionSource:
                 interventionDescription = preprocess_targets('InterventionDescription', eachInterventionSource['InterventionDescription'] )
                 combined_targets.update(interventionDescription)
-            else:
-                interventionDescription = None
 
 
-            '''
-
+            # LF1: DS labeler, LF2: Heuristic ReGeX labeler
             for key_s, value_s in combined_sources.items():
                 
                 # Source
@@ -261,20 +255,32 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
                     
                     target_term = value_t['text'].lower()
 
-                    # Match using Distant supervision (confidence score)
-                    annotated_target = align_highconf_shorttarget(value_t, source_term)
+                    # LF1 Match using Distant supervision (confidence score)
+                    ds_token, ds_annot = align_highconf_shorttarget(value_t, source_term)
 
-                    # Match using ReGex
+                    # LF2 Match using ReGeX
                     regex_token, regex_annot = regexMatcher(value_t)
-                    if annotated_target:
-                        assert len(regex_annot) == len(annotated_target['annotation'])
-
-                    if len(value_s['tokens']) >= 6:
-                        print( value_s['text'] )
-
-                    # Match using Fuzzy Bigram match 
+                    if ds_annot:
+                        assert len(regex_annot) == len(ds_annot)
 
 
+            # LF3: Noun chunk labeler
+            for key_s, value_s in combined_np_sources.items():
+                
+                # Source
+                source_term = value_s['text'].lower()
+
+                # Match this source term to each and every target
+                for key_t, value_t in combined_targets.items():
+                    
+                    target_term = value_t['text'].lower()
+
+                    # LF3 Match Noun Chunks using Distant supervision 
+                    np_ds_token, np_ds_annot = align_highconf_shorttarget(value_t, source_term)
+                    print( np_ds_annot )
+
+
+            '''
 
             # if possed_interventionName is not None:
 
