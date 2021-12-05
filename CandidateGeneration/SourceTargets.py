@@ -7,35 +7,36 @@ __maintainer__ = "Anjani Dhrangadhariya"
 __email__ = "anjani.k.dhrangadhariya@gmail.com"
 __status__ = "Prototype/Research"
 
-import sys, json, os
-import logging
-import datetime as dt
-import time
-import random 
-
-from elasticsearch import Elasticsearch, helpers
-from elasticsearch_dsl import Search,  Q
-
-import difflib, re
-import nltk
-from nltk.tokenize import WhitespaceTokenizer, sent_tokenize, word_tokenize
-
-from collections import Counter
-from collections import defaultdict
 import collections
-import numpy as np
+import datetime as dt
+import difflib
+import json
+import logging
+import os
+import random
+import re
+import sys
+import time
 import traceback
+from collections import Counter, defaultdict
+from itertools import chain
 
 import matplotlib
+import nltk
+import numpy as np
+from elasticsearch import Elasticsearch, helpers
+from elasticsearch_dsl import Q, Search
+from nltk.tokenize import WhitespaceTokenizer, sent_tokenize, word_tokenize
+
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from pylab import *
 
-from Preprocessing import *
-from ExtractData import *
-from Scoring import *
 from Align import *
+from ExtractData import *
 from HeuristicLabelers import *
+from Preprocessing import *
+from Scoring import *
 
 ################################################################################
 # Set the logger here
@@ -183,17 +184,26 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
             detailedDescriptionTarget = preprocess_targets('detailedDescriptionTarget', detailedDescriptionTarget)
             combined_targets.update(detailedDescriptionTarget)
 
+        # target 5: intervention description
+        InterventionSource = getInterventionSource(protocol_section)
+        for eachInterventionSource in InterventionSource:
+            if 'InterventionDescription' in eachInterventionSource:
+                interventionDescription = preprocess_targets('InterventionDescription', eachInterventionSource['InterventionDescription'] )
+                combined_targets.update(interventionDescription)
+
 
         ################################################################################
         # Get and preprocess sources (XXX sources are plural/multiple structured terms)
         ################################################################################
-        """interventionSource generator contains multiple interventions used in the study.
-        Each interventionSource generator instance contains meta-information about the intervention used."""
+        interventionSource = []
         # Source 1: Interventions
-        interventionSource = getInterventionNames(protocol_section)
+        interventions, interventionSyn = getInterventionNames(protocol_section)
 
-        # Source 2: Arms Groups
+        # Source 2: Arms Group Labels will be considered as Intervention names as well
         armGroup = getArmsGroups(protocol_section)
+
+        # Combined sources
+        interventionSource.extend( interventions ); interventionSource.extend( interventionSyn ); interventionSource.extend( armGroup )
 
         # Aggregate annotations for each target text
         agrregateannot_officialTitleTarget = []
@@ -203,81 +213,49 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
         agrregateannot_detailedDescription = [] 
 
         intervention_counter = 0
-        # XXX Each individual intervention term is iterated here
-        for int_number, eachInterventionSource in enumerate(interventionSource):
+        # XXX Process each individual intervention term here. (Abbreviation identification, POS tagging, NP identification)
+        for int_number, eachInterventionTerm in enumerate(interventionSource):
           
-            write_intervention = dict() # Write all the intervention annotations for any particular hit in this dictionary
-          
-            intervention_counter = intervention_counter + 1
-            write_intervention['intervention_number'] = intervention_counter
+            processed_intTerm = preprocess_sources('int_term_', int_number, eachInterventionTerm)
+            combined_sources.update(processed_intTerm)
+            possed_np = preprocess_np(processed_intTerm, int_number)
+            if possed_np:
+                combined_np_sources.update( possed_np )
 
-            # Intervention type 
-            interventionType = eachInterventionSource['InterventionType']
-            write_intervention['intervention_type'] = interventionType
+        # Go through each 
+        # LF1: DS labeler, LF2: Heuristic ReGeX labeler
+        for key_s, value_s in combined_sources.items():
+            
+            # Source
+            source_term = value_s['text'].lower()
 
-            # Source 1.1: Intervention Name
-            if 'InterventionName' in eachInterventionSource:
-                interventionName = eachInterventionSource['InterventionName']
-                write_intervention['intervention_name'] = interventionName
-
-                possed_interventionName = preprocess_sources('int_name_', int_number, interventionName)
-                combined_sources.update(possed_interventionName)
-                possed_np = preproces_np(possed_interventionName, int_number)
-                if possed_np:
-                    combined_np_sources.update( possed_np )
-
-            # Source 1.2: Intervention Other name
-            if 'InterventionOtherNameList' in eachInterventionSource:
-                interventionOtherNames = eachInterventionSource['InterventionOtherNameList']['InterventionOtherName']
-                for syn_number, syn in enumerate(interventionOtherNames):
-                    id = str(int_number) + '_' + str(syn_number)
-                    possed_syn = preprocess_sources('int_syn_', id, syn)
-                    combined_sources.update(possed_syn)
-
-                    possed_syn_np = preproces_np(possed_syn, str(int_number) + '_' + str(syn_number))
-                    if possed_syn_np:
-                        combined_np_sources.update( possed_syn_np )
-
-            # target 5: intervention description
-            if 'InterventionDescription' in eachInterventionSource:
-                interventionDescription = preprocess_targets('InterventionDescription', eachInterventionSource['InterventionDescription'] )
-                combined_targets.update(interventionDescription)
-
-
-            # LF1: DS labeler, LF2: Heuristic ReGeX labeler
-            for key_s, value_s in combined_sources.items():
+            # Match this source term to each and every target
+            for key_t, value_t in combined_targets.items():
                 
-                # Source
-                source_term = value_s['text'].lower()
+                target_term = value_t['text'].lower()
 
-                # Match this source term to each and every target
-                for key_t, value_t in combined_targets.items():
-                    
-                    target_term = value_t['text'].lower()
+                # LF1 Match using Distant supervision (confidence score)
+                ds_token, ds_annot = align_highconf_shorttarget(value_t, source_term)
 
-                    # LF1 Match using Distant supervision (confidence score)
-                    ds_token, ds_annot = align_highconf_shorttarget(value_t, source_term)
-
-                    # LF2 Match using ReGeX
-                    regex_token, regex_annot = regexMatcher(value_t)
-                    if ds_annot:
-                        assert len(regex_annot) == len(ds_annot)
+                # LF2 Match using ReGeX
+                regex_token, regex_annot = regexMatcher(value_t)
+                if ds_annot:
+                    assert len(regex_annot) == len(ds_annot)
 
 
-            # LF3: Noun chunk labeler
-            for key_s, value_s in combined_np_sources.items():
+        # LF3: Noun chunk labeler
+        for key_s, value_s in combined_np_sources.items():
+            
+            # Source
+            source_term = value_s['text'].lower()
+
+            # Match this source term to each and every target
+            for key_t, value_t in combined_targets.items():
                 
-                # Source
-                source_term = value_s['text'].lower()
+                target_term = value_t['text'].lower()
 
-                # Match this source term to each and every target
-                for key_t, value_t in combined_targets.items():
-                    
-                    target_term = value_t['text'].lower()
-
-                    # LF3 Match Noun Chunks using Distant supervision 
-                    np_ds_token, np_ds_annot = align_highconf_shorttarget(value_t, source_term)
-                    print( np_ds_annot )
+                # LF3 Match Noun Chunks using Distant supervision 
+                np_ds_token, np_ds_annot = align_highconf_shorttarget(value_t, source_term)
 
 
             '''
