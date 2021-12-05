@@ -78,6 +78,7 @@ def getPOStags(value):
     is_alpha = [ token.is_alpha for token in doc ]
     is_stop = [ token.is_stop for token in doc ]
     char_offsets = [token.idx for token in doc]
+    noun_chunks = list(doc.noun_chunks)
 
     assert len( char_offsets ) == len( tokens )
 
@@ -86,7 +87,8 @@ def getPOStags(value):
     pos_dict['lemma'] = lemma
     pos_dict['pos'] = pos
     pos_dict['pos_fine'] = pos_fine
-    pos_dict['idx'] = char_offsets   
+    pos_dict['idx'] = char_offsets
+    pos_dict['noun_chunks'] = noun_chunks
 
     return pos_dict
 
