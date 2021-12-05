@@ -149,10 +149,12 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
     write_hit['id'] = NCT_id
 
     try:
+        combined_annot = dict()
 
         combined_targets = dict()
         combined_sources = dict()
         combined_np_sources = dict()
+        combined_bgm_sources = dict()
 
         protocol_section = fullstudy['ProtocolSection']
         derieved_section = fullstudy['DerivedSection']
@@ -193,10 +195,10 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
 
 
         ################################################################################
-        # Get and preprocess sources (XXX sources are plural/multiple structured terms)
+        # Get and preprocess sources
         ################################################################################
         interventionSource = []
-        # Source 1: Interventions
+        # Source 1: Interventions, Intervention synonyms
         interventions, interventionSyn = getInterventionNames(protocol_section)
 
         # Source 2: Arms Group Labels will be considered as Intervention names as well
@@ -204,6 +206,7 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
 
         # Combined sources
         interventionSource.extend( interventions ); interventionSource.extend( interventionSyn ); interventionSource.extend( armGroup )
+        interventionSource = list( set(interventionSource) ) # removes any duplicate entries
 
         # Aggregate annotations for each target text
         agrregateannot_officialTitleTarget = []
@@ -212,17 +215,23 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
         agrregateannot_briefSummary = []
         agrregateannot_detailedDescription = [] 
 
-        intervention_counter = 0
-        # XXX Process each individual intervention term here. (Abbreviation identification, POS tagging, NP identification)
+        # Process each individual intervention term here. (Abbreviation identification, POS tagging, NP identification, BiGram identification)
         for int_number, eachInterventionTerm in enumerate(interventionSource):
           
             processed_intTerm = preprocess_sources('int_term_', int_number, eachInterventionTerm)
             combined_sources.update(processed_intTerm)
+            
+            # Fetch Noun Chunks
             possed_np = preprocess_np(processed_intTerm, int_number)
             if possed_np:
                 combined_np_sources.update( possed_np )
 
-        # Go through each 
+            # Fetch Bigrams
+            if len(eachInterventionTerm.split(' ')) > 3:
+                bigrams = getBigrams( eachInterventionTerm )
+                if bigrams:
+                    combined_bgm_sources.update( bigrams )
+
         # LF1: DS labeler, LF2: Heuristic ReGeX labeler
         for key_s, value_s in combined_sources.items():
             
@@ -256,6 +265,21 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
 
                 # LF3 Match Noun Chunks using Distant supervision 
                 np_ds_token, np_ds_annot = align_highconf_shorttarget(value_t, source_term)
+
+
+        # LF4: Fuzzy Bigram labeler
+        for key_s, value_s in combined_bgm_sources.items():
+            
+            # Source
+            source_term = value_s['text'].lower()
+
+            # Match this source term to each and every target
+            for key_t, value_t in combined_targets.items():
+                
+                target_term = value_t['text'].lower()
+
+                # LF3 Match Noun Chunks using Distant supervision 
+                bgm_ds_token, bgm_ds_annot = align_highconf_shorttarget(value_t, source_term)
 
 
             '''
