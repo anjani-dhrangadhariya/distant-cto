@@ -37,6 +37,7 @@ from ExtractData import *
 from HeuristicLabelers import *
 from Preprocessing import *
 from Scoring import *
+from MergeAnnot import *
 
 ################################################################################
 # Set the logger here
@@ -240,10 +241,10 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
 
         # Add all the targets to the final annotation dictionary:
         for key_t, value_t in combined_targets.items():
-            combined_annot_ds[key_t] = value_t
-            combined_annot_regex[key_t] = value_t
-            combined_annot_fuzzy[key_t] = value_t
-            combined_annot_np[key_t] = value_t
+            combined_annot_ds[key_t] = value_t; combined_annot_ds[key_t]['annot'] = {}
+            combined_annot_regex[key_t] = value_t; combined_annot_regex[key_t]['annot'] = {}
+            combined_annot_fuzzy[key_t] = value_t; combined_annot_fuzzy[key_t]['annot'] = {}
+            combined_annot_np[key_t] = value_t; combined_annot_np[key_t]['annot'] = {}
 
             combined_annot_ds_all[key_t] = value_t
             combined_annot_regex_all[key_t] = value_t
@@ -254,7 +255,6 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
             # Source
             source_term = value_s['text'].lower()
           
-
             # Match this source term to each and every target
             for key_t, value_t in combined_targets.items():
                 
@@ -263,10 +263,24 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
                 # LF1 Match using Distant supervision (confidence score)
                 ds_token, ds_annot = align_highconf_shorttarget(value_t, source_term)
 
+                if ds_annot:
+                    if 'ds' not in combined_annot_ds[key_t]['annot']:
+                        combined_annot_ds[key_t]['annot']['ds'] = ds_annot
+                    else:
+                        merge_to = combined_annot_ds[key_t]['annot']['ds']
+                        combined_annot_ds[key_t]['annot']['ds'] =  mergeOldNew( merge_to, ds_annot )
+
                 # LF2 Match using ReGeX
                 regex_token, regex_annot = regexMatcher(value_t)
                 if ds_annot:
                     assert len(regex_annot) == len(ds_annot)
+
+                if regex_annot:
+                    if 'regex' not in combined_annot_regex[key_t]['annot']:
+                        combined_annot_regex[key_t]['annot']['regex'] = regex_annot
+                    else:
+                        merge_to = combined_annot_regex[key_t]['annot']['regex']
+                        combined_annot_regex[key_t]['annot']['regex'] =  mergeOldNew( merge_to, ds_annot )
 
 
         # LF3: Noun chunk labeler
@@ -283,6 +297,13 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
                 # LF3 Match Noun Chunks using Distant supervision 
                 np_ds_token, np_ds_annot = align_highconf_shorttarget(value_t, source_term)
 
+                if np_ds_annot:
+                    if 'np' not in combined_annot_np[key_t]['annot']:
+                        combined_annot_np[key_t]['annot']['np'] = np_ds_annot
+                    else:
+                        merge_to = combined_annot_np[key_t]['annot']['np']
+                        combined_annot_np[key_t]['annot']['np'] =  mergeOldNew( merge_to, ds_annot )
+
 
         # LF4: Fuzzy Bigram labeler
         for key_s, value_s in combined_bgm_sources.items():
@@ -297,6 +318,13 @@ for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search result
 
                 # LF3 Match Noun Chunks using Distant supervision 
                 bgm_ds_token, bgm_ds_annot = align_highconf_shorttarget(value_t, source_term)
+
+                if bgm_ds_annot:
+                    if 'fuzzy' not in combined_annot_fuzzy[key_t]['annot']:
+                        combined_annot_fuzzy[key_t]['annot']['fuzzy'] = bgm_ds_annot
+                    else:
+                        merge_to = combined_annot_fuzzy[key_t]['annot']['fuzzy']
+                        combined_annot_fuzzy[key_t]['annot']['fuzzy'] =  mergeOldNew( merge_to, ds_annot )
 
 
             '''
