@@ -12,9 +12,14 @@ __status__ = "Prototype/Research"
 ################################################################################
 import enum
 import re
+import string
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
 import spacy
 from spacy.lang.en import English
 from scispacy.abbreviation import AbbreviationDetector
+stop_words = set(stopwords.words('english'))
 
 nlp = spacy.load("en_core_sci_sm")
 nlp.add_pipe("sentencizer")
@@ -23,6 +28,11 @@ nlp.add_pipe("abbreviation_detector")
 ################################################################################
 # Preprocessing functions
 ################################################################################
+def fetch_tokens(s):
+    doc = nlp(s)
+    return [ token.text for token in doc ]
+
+
 '''
 Description:
     The function extracts acronyms using Scispacy abbreviation detector
@@ -107,6 +117,9 @@ def removeHyphenString(s):
 def removeSpaceTrailsString(s):
     return " ".join(s.split())
 
+def removePunct(s):
+    return s.translate(str.maketrans('', '', string.punctuation))
+
 
 def clean_unicide(s):
     s_encode = s.encode("ascii", "ignore")
@@ -118,8 +131,8 @@ def preprocess_targets(target_nomen, s):
 
     targets = dict()
     
-    # modified_s = removeSpaceTrailsString(s)
     modified_s = removeHyphenString(s) 
+    modified_s = removeSpaceTrailsString(modified_s)
     modified_s = clean_unicide(modified_s)
 
     doc = nlp(modified_s)
@@ -135,7 +148,6 @@ def preprocess_sources(source_nomen, counter, s):
 
     sources = dict()
 
-    # modified_s = removeHyphenString(s)
     modified_s = clean_unicide(s)
 
     detected_abb = fetchAcronyms(modified_s)
@@ -162,3 +174,47 @@ def preprocess_np(int_with_np, counter_key):
                 possed_interventionNounChunk.update( chunk_possed )
     
     return possed_interventionNounChunk
+
+
+def ngrams(s):
+
+    bigrams = []
+
+    tokens = fetch_tokens(s)
+    removed_stopwords = ' '.join([x for x in tokens if x not in stop_words ])
+    bigrm = nltk.bigrams(removed_stopwords.split(' '))
+
+    for bgm in bigrm:
+        bigrams.append( ' '.join(bgm) )
+
+    return bigrams
+
+
+def getBigrams(intervention_term):
+
+    bigram_dict = dict()
+    bigrams = []
+    
+    detected_abb = fetchAcronyms(intervention_term)
+
+    if detected_abb:
+        for i, abb in enumerate(detected_abb):
+            if len(abb.split(' ')) > 3:
+                # remove punctuation
+                punct_stripped = removePunct(abb)
+                modified_term = removeSpaceTrailsString(punct_stripped)
+                bigrams.extend( ngrams(modified_term) ) 
+
+    else:
+        punct_stripped = removePunct(intervention_term)
+        modified_term = removeSpaceTrailsString(punct_stripped)
+        bigrams_i = ngrams(modified_term)
+        bigrams.extend( ngrams(modified_term) ) 
+
+    if bigrams:
+        for i, bgm in enumerate(bigrams):
+            possed_bgm = getPOStags(bgm)
+            key = 'bigram_'+ str(i)
+            bigram_dict[key] = possed_bgm
+
+    return bigram_dict
