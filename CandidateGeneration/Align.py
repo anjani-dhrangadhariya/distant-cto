@@ -104,10 +104,10 @@ def extract(source, target_text, target, match):
 ###############################################################################################
 # Function to align source intervention terms with high confidence short targets
 ###############################################################################################
-def align_highconf_shorttarget(target, source):
+def align_highconf_target(target, source):
     annot = list() # Get's updated for each Intervention name identified
     token = list()
-    annotated_target = dict()
+    extracted_annot = dict()
 
     target_term = target['text'].lower()
 
@@ -116,13 +116,16 @@ def align_highconf_shorttarget(target, source):
         s = difflib.SequenceMatcher(None, target_term, source, autojunk=True)
         matches = fullMatchScore(s, source, target_term)
         for match in matches:
-            if match[0] == 1.0:               
-                annotated_target = extract( source, target_term, target, match )
+            if match[0] >= 1.0:               
+                extracted_annot = extract( source, target_term, target, match )
 
-    if annotated_target:
-        return annotated_target['tokens'], annotated_target['annotation']
+                # print( extracted_annot )
+
+    if extracted_annot:
+        return target['tokens'], extracted_annot['annotation']
     else:
         return token, annot
+
 
 ###############################################################################################
 # Function to align source intervention terms with high confidence long targets
