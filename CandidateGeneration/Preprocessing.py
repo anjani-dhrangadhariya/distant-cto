@@ -202,11 +202,13 @@ def getBigrams(intervention_term):
             if len(abb.split(' ')) >= 3:
                 # remove punctuation
                 punct_stripped = removePunct(abb)
+                #punct_stripped = abb
                 modified_term = removeSpaceTrailsString(punct_stripped)
                 bigrams.extend( ngrams(modified_term) ) 
 
     else:
         punct_stripped = removePunct(intervention_term)
+        #punct_stripped = intervention_term
         modified_term = removeSpaceTrailsString(punct_stripped)
         bigrams_i = ngrams(modified_term)
         bigrams.extend( ngrams(modified_term) ) 
