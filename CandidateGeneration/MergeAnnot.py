@@ -39,6 +39,9 @@ def mergeAnnotations(main_dict_merged, key_t, value_t, annot_type, input_annot):
 
             main_dict_merged[key_t][annot_type] = merged_annot
 
+        elif annot_type not in main_dict_merged[key_t]:
+            main_dict_merged[key_t][annot_type] = input_annot
+
     return main_dict_merged
 
 # aggregate the annotations here
