@@ -10,17 +10,26 @@ import pdb
 import random
 import sys
 import time
-from ModelTraining.DataBuilders.ContextualVectorBuilder import getContextualVectors
-from ModelTraining.Models.ChooseModel import choose_tokenizer_type
 
 import numpy as np
 import pandas as pd
-from memory_profiler import profile
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 
-from DataBuilders.contextual_vector_builder import *
 from Utilities.experiment_arguments import *
+from DataBuilders.ContextualVectorBuilder import *
+
+def flatten(l):
+    flatList = []
+    for elem in l:
+        # if an element of a list is a list
+        # iterate over this list and add elements to flatList 
+        if type(elem) == list:
+            for e in elem:
+                flatList.append(e)
+        else:
+            flatList.append(elem)
+    return flatList
 
 # @profile
 def readRawCandidates( list_NCT, label_type=None ):
@@ -39,18 +48,11 @@ def readRawCandidates( list_NCT, label_type=None ):
             for target_key, target in annot.items():
 
                 if 'id' not in target_key:
-                    for sentence_key, sentence in target.items():
 
-                        if set(sentence['tokens'])!={0}:
-                            tokens.append( sentence['tokens'] )
-                            labels.append( sentence['annotation'] )
-                            nct_ids.append( id_ )
-
-                            # TODO: Generate dummy POS items
-                            pos_i = [0] * len( sentence['tokens'] )
-                            pos.append( pos_i )
-                        else:
-                            print('All the labels are nil')
+                    nct_ids.append( id_ )
+                    tokens.append( target['tokens'] )
+                    labels.append( target['all'] )
+                    pos.append( target['pos'] )
 
             if i == 6:
                 break
@@ -88,7 +90,7 @@ def readManuallyAnnoted( input_file_path, label_type=None ):
                 tokens.append(document_annotations[0])
                 labels.append(document_annotations[1])
                 # TODO: Generate dummy POS items
-                pos_i = [0] * len( document_annotations[0] )
+                pos_i = ['NOUN'] * len( document_annotations[0] ) # TODO: Dummy POS
                 pos.append( pos_i )
 
     corpus_df = pd.DataFrame(
@@ -109,6 +111,9 @@ def readManuallyAnnoted( input_file_path, label_type=None ):
 
 def fetchAndTransformCandidates():
 
+    # POS label encoder
+    le_pos = preprocessing.LabelEncoder()
+
     args = getArguments() # get all the experimental arguments
 
     start_candidate_reading = time.time()
@@ -122,16 +127,24 @@ def fetchAndTransformCandidates():
     hilfiker = readManuallyAnnoted( args.hilfiker, label_type=None )
     print("--- Took %s seconds to read the manually annotated datasets ---" % (time.time() - start_manual_reading))
 
+    fullPOS_ = flatten( raw_candidates['pos'].values.tolist() )
+    fullPOS__ = flatten( ebm_nlp['pos'].values.tolist() )
+    fullPOS___ = flatten( ebm_gold['pos'].values.tolist() )
+    fullPOS____ = flatten( hilfiker['pos'].values.tolist() )
+    fullPOS = fullPOS_ + fullPOS__ + fullPOS___ + fullPOS____
+    fullPOS = list(set(fullPOS))
+    pos_encoded = le_pos.fit_transform( fullPOS )
+
     start_candidate_transformation = time.time()
     tokenizer, model = choose_tokenizer_type( args.embed )
-    input_embeddings, input_labels, input_masks, input_pos, tokenizer = getContextualVectors( raw_candidates, tokenizer, args.embed, args.max_len )
+    input_embeddings, input_labels, input_masks, input_pos, tokenizer = getContextualVectors( raw_candidates, tokenizer, args.embed, args.max_len, le_pos )
     assert len( input_embeddings ) == len( raw_candidates )
     print("--- Took %s seconds to transform the raw weakly annotated candidates ---" % (time.time() - start_candidate_transformation))
 
     start_manual_transformation = time.time()
-    ebm_nlp_embeddings, ebm_nlp_labels, ebm_nlp_masks, ebm_nlp_pos, tokenizer = getContextualVectors( ebm_nlp, tokenizer, args.embed, args.max_len )
-    ebm_gold_embeddings, ebm_gold_labels, ebm_gold_masks, ebm_gold_pos, tokenizer = getContextualVectors( ebm_gold, tokenizer, args.embed, args.max_len )
-    hilfiker_embeddings, hilfiker_labels, hilfiker_masks, hilfiker_pos, tokenizer = getContextualVectors( hilfiker, tokenizer, args.embed, args.max_len )
+    ebm_nlp_embeddings, ebm_nlp_labels, ebm_nlp_masks, ebm_nlp_pos, tokenizer = getContextualVectors( ebm_nlp, tokenizer, args.embed, args.max_len, le_pos )
+    ebm_gold_embeddings, ebm_gold_labels, ebm_gold_masks, ebm_gold_pos, tokenizer = getContextualVectors( ebm_gold, tokenizer, args.embed, args.max_len, le_pos )
+    hilfiker_embeddings, hilfiker_labels, hilfiker_masks, hilfiker_pos, tokenizer = getContextualVectors( hilfiker, tokenizer, args.embed, args.max_len, le_pos )
     print("--- Took %s seconds to transform the manually annotated datasets ---" % (time.time() - start_manual_transformation))
 
     candidates_df = raw_candidates.assign(embeddings = pd.Series(input_embeddings).values, label_pads = pd.Series(input_labels).values, attn_masks = pd.Series(input_masks).values, inputpos = pd.Series(input_pos).values) # assign the padded embeddings to the dataframe
