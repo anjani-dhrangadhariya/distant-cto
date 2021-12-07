@@ -18,7 +18,7 @@ def mergeAnnotations(main_dict_merged, key_t, value_t, annot_type, input_annot):
         else:
             merge_to = main_dict_merged[key_t][annot_type]
             merged_annot = [0] * len(input_annot)
-            assert len(merge_to) == len(input_annot)
+            assert len(merge_to) == len(input_annot) == len(value_t['tokens'])
 
             for counter, (o_a, n_a) in enumerate(zip( merge_to, input_annot )):
                 chosen_annot = max( int(o_a), int(n_a) )
@@ -31,7 +31,7 @@ def mergeAnnotations(main_dict_merged, key_t, value_t, annot_type, input_annot):
 
             merge_to = main_dict_merged[key_t][annot_type]
             merged_annot = [0] * len(input_annot)
-            assert len(merge_to) == len(input_annot)
+            assert len(merge_to) == len(input_annot) == len(value_t['tokens'])
 
             for counter, (o_a, n_a) in enumerate(zip( merge_to, input_annot )):
                 chosen_annot = max( int(o_a), int(n_a) )
