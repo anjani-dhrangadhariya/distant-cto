@@ -1,109 +1,83 @@
-'''
-Module to preprocess the data for input to BERT based embeddings
-'''
-__author__ = "Anjani Dhrangadhariya"
-__maintainer__ = "Anjani Dhrangadhariya"
-__email__ = "anjani.k.dhrangadhariya@gmail.com"
-__status__ = "Prototype/Research"
-
 ##################################################################################
 # Imports
 ##################################################################################
 # staple imports
 import warnings
+
+from Utilities.choosers import choose_tokenizer_type
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-import os
-import sys
+import argparse
+import datetime
+import datetime as dt
+import gc
 import glob
+import json
+import logging
+import os
+import pdb
+import random
+import sys
+import time
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import time
-import datetime
-import argparse
-import pdb
-import json
-import random
-import sys, json, os
-import logging
-import datetime as dt
-import time
-
-import gc
-
-# numpy essentials
-from numpy import asarray
-import numpy as np
-
-# keras essentials
-from keras.preprocessing.sequence import pad_sequences
-
+# visualization
+import seaborn as sn
 # pyTorch essentials
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
-from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 import torch.optim as optim
+# keras essentials
+from keras.preprocessing.sequence import pad_sequences
+from memory_profiler import profile
+# numpy essentials
+from numpy import asarray
 from torch import LongTensor
+from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
+                              TensorDataset)
+from transformers import (AdamW, AutoTokenizer, BertConfig, BertModel,
+                          BertTokenizer, GPT2Config, GPT2Model, GPT2Tokenizer,
+                          RobertaConfig, RobertaModel,
+                          get_linear_schedule_with_warmup)
 
-# Transformers 
-from transformers import BertModel, BertTokenizer, BertConfig
-from transformers import RobertaConfig, RobertaModel
-from transformers import GPT2Model, GPT2Tokenizer, GPT2Config
-from transformers import AutoTokenizer 
-# from transformers import AutoTokenizer, AutoModelForTokenClassification, AutoModel
-from transformers import AdamW 
-from transformers import get_linear_schedule_with_warmup
+from VectorBuilders.contextual_vector_builder import *
 
-# visualization
-import seaborn as sn
-import pandas as pd
-import matplotlib.pyplot as plt
+def tokenize_and_preserve_labels(sentence, text_labels, pos, tokenizer):
+    dummy_label = 100 # Could be any kind of labels that you can mask
+    tokenized_sentence = []
+    labels = []
+    poss = []
+    printIt = []
 
-from tensorboardX import SummaryWriter
+    for word, label, pos_i in zip(sentence, text_labels, pos):
 
-##################################################################################
-# Generates attention masks
-##################################################################################
-def createAttnMask(input_ids):
-    # Add attention masks
-    # Create attention masks
-    attention_masks = []
+        # Tokenize the word and count # of subwords the word is broken into
+        tokenized_word = tokenizer.encode(word, add_special_tokens = False)
+        n_subwords = len(tokenized_word)
 
-    # For each sentence...
-    for sent in input_ids:
-        
-        # Create the attention mask.
-        #   - If a token ID is 0, then it's padding, set the mask to 0.
-        #   - If a token ID is > 0, then it's a real token, set the mask to 1.
-        att_mask = [int(token_id > 0) for token_id in sent]
-        
-        # Store the attention mask for this sentence.
-        attention_masks.append(att_mask)
+        # Add the tokenized word to the final tokenized word list
+        tokenized_sentence.extend(tokenized_word)
 
-    return attention_masks
+        # Add the same label to the new list of labels `n_subwords` times
+        if n_subwords == 1:
+            labels.extend([label] * n_subwords)
+            poss.extend( [pos_i] * n_subwords )
+        elif n_subwords == 0:
+            pass
+        else:
+            labels.extend([label])
+            labels.extend( [dummy_label] * (n_subwords-1) )
+            poss.extend( [pos_i] * n_subwords ) 
 
-##################################################################################
-# Load the chosen tokenizer
-##################################################################################
-def choose_tokenizer_type(pretrained_model):
-    
-    print('Loading tokenizer...')
-    if 'bert' in pretrained_model and 'bio' not in pretrained_model and 'sci' not in pretrained_model:
-        tokenizer_ = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
+    assert len(tokenized_sentence) == len(labels) == len(poss)
 
-    elif 'gpt2' in pretrained_model:
-        tokenizer_ = GPT2Tokenizer.from_pretrained('gpt2', do_lower_case=True, unk_token="<|endoftext|>")
-
-    elif 'biobert' in pretrained_model:
-        tokenizer_ = AutoTokenizer.from_pretrained("dmis-lab/biobert-v1.1")
-
-    elif 'scibert' in pretrained_model:
-        tokenizer_ = AutoTokenizer.from_pretrained("allenai/scibert_scivocab_uncased")
-
-    return tokenizer_
+    return tokenized_sentence, labels, poss
 
 ##################################################################################
 # The function truncates input sequences to max lengths
@@ -135,42 +109,31 @@ def addSpecialtokens(eachText, start_token, end_token):
     return eachText
 
 ##################################################################################
-# The function generates subword tokens using the chosen tokenizer and adjusts labels accordingly
+# Generates attention masks
 ##################################################################################
-def tokenize_and_preserve_labels(sentence, text_labels, pos, tokenizer, max_length, pretrained_model):
+def createAttnMask(input_ids):
+    # Add attention masks
+    # Create attention masks
+    attention_masks = []
 
-    """
-    Word piece tokenization makes it difficult to match word labels
-    back up with individual word pieces. This function tokenizes each
-    word one at a time so that it is easier to preserve the correct
-    label for each subword. It is, of course, a bit slower in processing
-    time, but it will help our model achieve higher accuracy.
-    """
-    dummy_label = 100 # Could be any kind of labels that you can mask
-    tokenized_sentence = []
-    labels = []
-    poss = []
-    printIt = []
+    # For each sentence...
+    for sent in input_ids:
+        
+        # Create the attention mask.
+        #   - If a token ID is 0, then it's padding, set the mask to 0.
+        #   - If a token ID is > 0, then it's a real token, set the mask to 1.
+        att_mask = [int(token_id > 0) for token_id in sent]
+        
+        # Store the attention mask for this sentence.
+        attention_masks.append(att_mask)
 
-    for word, label, pos_i in zip(sentence, text_labels, pos):
+    return np.asarray(attention_masks, dtype=np.uint8)
 
-        # Tokenize the word and count # of subwords the word is broken into
-        tokenized_word = tokenizer.encode(word, add_special_tokens = False)
-        n_subwords = len(tokenized_word)
 
-        # Add the tokenized word to the final tokenized word list
-        tokenized_sentence.extend(tokenized_word)
+def transform(sentence, text_labels, pos, tokenizer, max_length, pretrained_model):
 
-        # Add the same label to the new list of labels `n_subwords` times
-        if n_subwords == 1:
-            labels.extend([label] * n_subwords)
-            poss.extend( [pos_i] * n_subwords ) 
-        else:
-            labels.extend([label])
-            labels.extend( [dummy_label] * (n_subwords-1) )
-            poss.extend( [pos_i] * n_subwords ) 
-
-    assert len(tokenized_sentence) == len(labels) == len(poss)
+    # Tokenize and preserve labels
+    tokenized_sentence, labels, poss = tokenize_and_preserve_labels(sentence, text_labels, pos, tokenizer)
 
     # Truncate the sequences (sentence and label) to (max_length - 2)
     if max_length >= 510:
@@ -182,7 +145,7 @@ def tokenize_and_preserve_labels(sentence, text_labels, pos, tokenizer, max_leng
         truncated_sentence = tokenized_sentence
         truncated_labels = labels
         truncated_pos = poss
-        assert len(truncated_sentence) == len(truncated_labels) == len(truncated_pos)         
+        assert len(truncated_sentence) == len(truncated_labels) == len(truncated_pos)
 
     # Add special tokens CLS and SEP for the BERT tokenizer (identical for SCIBERT)
     if 'bert' in pretrained_model.lower():
@@ -197,38 +160,32 @@ def tokenize_and_preserve_labels(sentence, text_labels, pos, tokenizer, max_leng
     if 'bert' in pretrained_model.lower():
         input_ids = pad_sequences([ speTok_sentence ] , maxlen=max_length, value=tokenizer.pad_token_id, padding="post")
     elif 'gpt2' in pretrained_model.lower():
-        input_ids = pad_sequences([ speTok_sentence ] , maxlen=max_length, value=tokenizer.unk_token_id, padding="post")
+        input_ids = pad_sequences([ speTok_sentence ] , maxlen=max_length, value=tokenizer.unk_token_id, padding="post")    
 
     input_labels = pad_sequences([ speTok_labels ] , maxlen=max_length, value=0, padding="post")
     input_pos = pad_sequences([ speTok_pos ] , maxlen=max_length, value=0, padding="post")
 
+    assert len( input_ids ) == len( input_labels ) == len( input_pos )
+
     # Get the attention masks
     attention_masks = createAttnMask( input_ids )
-    attention_masks = np.asarray(attention_masks, dtype=np.uint8)
 
-    assert len(input_ids.squeeze()) == max_length
-    assert len(input_labels.squeeze()) == max_length
-    assert len(attention_masks.squeeze()) == max_length
-    assert len(input_pos.squeeze()) == max_length
+    assert len(input_ids.squeeze()) == len(input_labels.squeeze()) == len(attention_masks.squeeze()) == len(input_pos.squeeze()) == max_length
 
     return input_ids.squeeze(), input_labels.squeeze(), attention_masks.squeeze(), input_pos.squeeze()
 
+def getContextualVectors( annotations_df, tokenizer, pretrained_model, MAX_LEN, pos_encoder = None ):
 
-def get_contextual_vectors(annotations_df, vector_type, pos_encoder, MAX_LEN):
-
-    # Choose tokenizer here
-    tokenizer = choose_tokenizer_type(vector_type)
-
-    # Training set: tokenize, preserve labels, truncate, add special tokens and pad to the MAX_LEN_new
+    # Tokenize and preserve labels
     tokenized = []
-    for tokens, labels, pos in zip(list(annotations_df['tokens']), list(annotations_df['labels']), list(annotations_df['pos'])) :
-        temp = tokenize_and_preserve_labels(tokens, labels, pos_encoder.transform(pos), tokenizer, MAX_LEN, vector_type)
-        tokenized.append( temp ) # coarse labels for the training set
+    for tokens, labels, pos, nctid in zip(list(annotations_df['tokens']), list(annotations_df['labels']), list(annotations_df['pos']), list(annotations_df['ids'])) :
+        temp = transform(tokens, labels, pos, tokenizer, MAX_LEN, pretrained_model)
+        tokenized.append( temp )
 
     tokens, labels, masks, poss = list(zip(*tokenized))
 
     # Delete the tokenizer and tokenized list to reduce RAM usage
-    del tokenizer, tokenized
+    del tokenized
     gc.collect()
-    
-    return tokens, labels, masks, poss # Returns input IDs and labels together
+
+    return tokens, labels, masks, poss, tokenizer
