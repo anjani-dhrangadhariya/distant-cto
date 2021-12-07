@@ -8,22 +8,38 @@ def partition(lst, n):
         chunks.append( lst[i:i + n]  )
     return chunks
 
-def mergeOldNew(main_dict, key_t, annot_type, input_annot):
+def mergeAnnotations(main_dict_merged, key_t, value_t, annot_type, input_annot):
 
-    if annot_type not in main_dict[key_t]['annot']:
-        main_dict[key_t]['annot'][annot_type] = input_annot
-    else:
-        merge_to = main_dict[key_t]['annot'][annot_type]
-        merged_annot = [0] * len(input_annot)
-        assert len(merge_to) == len(input_annot)
+    if key_t not in main_dict_merged:
+        main_dict_merged[key_t] = value_t
 
-        for counter, (o_a, n_a) in enumerate(zip( merge_to, input_annot  )):
-            chosen_annot = max( int(o_a), int(n_a) )
-            merged_annot[counter] = chosen_annot
+        if annot_type not in main_dict_merged[key_t]:
+            main_dict_merged[key_t][annot_type] = input_annot
+        else:
+            merge_to = main_dict_merged[key_t][annot_type]
+            merged_annot = [0] * len(input_annot)
+            assert len(merge_to) == len(input_annot)
 
-        main_dict[key_t]['annot'][annot_type] = merged_annot
+            for counter, (o_a, n_a) in enumerate(zip( merge_to, input_annot )):
+                chosen_annot = max( int(o_a), int(n_a) )
+                merged_annot[counter] = chosen_annot
 
-    return main_dict
+            main_dict_merged[key_t][annot_type] = merged_annot
+
+    elif key_t in main_dict_merged:
+        if annot_type in main_dict_merged[key_t]:
+
+            merge_to = main_dict_merged[key_t][annot_type]
+            merged_annot = [0] * len(input_annot)
+            assert len(merge_to) == len(input_annot)
+
+            for counter, (o_a, n_a) in enumerate(zip( merge_to, input_annot )):
+                chosen_annot = max( int(o_a), int(n_a) )
+                merged_annot[counter] = chosen_annot
+
+            main_dict_merged[key_t][annot_type] = merged_annot
+
+    return main_dict_merged
 
 # aggregate the annotations here
 def aggregateLongTarget_annot(agrregateannot_briefSummary):
