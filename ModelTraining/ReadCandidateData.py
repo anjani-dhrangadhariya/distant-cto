@@ -32,7 +32,7 @@ def flatten(l):
     return flatList
 
 # @profile
-def readRawCandidates( list_NCT, label_type=None ):
+def readRawCandidates( list_NCT, annotation ):
 
     nct_ids = []
     tokens = []
@@ -42,20 +42,21 @@ def readRawCandidates( list_NCT, label_type=None ):
     with open(list_NCT, 'r', encoding='latin1') as NCT_ids_file:
 
         for i, eachLine in enumerate(NCT_ids_file):
-            annot = json.loads(eachLine)
-            id_ = annot['id']
+            if len(eachLine) > 4:
+                annot = json.loads(eachLine)
+                id_ = annot['id']
 
-            for target_key, target in annot.items():
+                for target_key, target in annot.items():
 
-                if 'id' not in target_key:
+                    if 'id' not in target_key:
 
-                    nct_ids.append( id_ )
-                    tokens.append( target['tokens'] )
-                    labels.append( target['all'] )
-                    pos.append( target['pos'] )
+                        nct_ids.append( id_ )
+                        tokens.append( target['tokens'] )
+                        labels.append( target[annotation] )
+                        pos.append( target['pos'] )
 
-            if i == 6:
-                break
+                if i == 6:
+                    break
 
     corpus_df = pd.DataFrame(
         {'ids': nct_ids,
@@ -72,7 +73,7 @@ def readRawCandidates( list_NCT, label_type=None ):
 
     return df
 
-def readManuallyAnnoted( input_file_path, label_type=None ):
+def readManuallyAnnoted( input_file_path ):
 
     nct_ids = []
     tokens = []
@@ -117,14 +118,14 @@ def fetchAndTransformCandidates():
     args = getArguments() # get all the experimental arguments
 
     start_candidate_reading = time.time()
-    raw_candidates = readRawCandidates( args.rawcand_file, label_type=None )
+    raw_candidates = readRawCandidates( args.rawcand_file, annotation=args.annot )
     print("--- Took %s seconds to read the raw weakly annotated candidates ---" % (time.time() - start_candidate_reading))
 
     # Retrieve EBM-PICO dataset here
     start_manual_reading = time.time()
-    ebm_nlp = readManuallyAnnoted( args.ebm_nlp, label_type=None )
-    ebm_gold = readManuallyAnnoted( args.ebm_gold, label_type=None )
-    hilfiker = readManuallyAnnoted( args.hilfiker, label_type=None )
+    ebm_nlp = readManuallyAnnoted( args.ebm_nlp )
+    ebm_gold = readManuallyAnnoted( args.ebm_gold )
+    hilfiker = readManuallyAnnoted( args.hilfiker )
     print("--- Took %s seconds to read the manually annotated datasets ---" % (time.time() - start_manual_reading))
 
     fullPOS_ = flatten( raw_candidates['pos'].values.tolist() )
