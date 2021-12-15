@@ -5,6 +5,7 @@ def logParams(args, seed):
     log_param("seed", str(seed))
     log_param("PICO entity", args.entity)
     log_param("input file", args.rawcand_file)
+    log_param("Annotation level", args.annot)
     log_param("embedding", args.embed)
     log_param("model name", args.model)
     log_param("label type", args.label_type)
