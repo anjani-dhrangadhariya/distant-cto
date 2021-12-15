@@ -258,22 +258,22 @@ def train(defModel, optimizer, scheduler, train_dataloader, development_dataload
                 logMetrics("val f1", val_f1, epoch_i)
                 string2print = "val f1" + str(exp_args.entity)
                 logMetrics(string2print, val_f1_1, epoch_i)
-                print('Validation: Epoch {} with macro average F1: {}, F1 score (entity): {}'.format(epoch_i, val_f1, val_f1_1))
+                print('Validation: Epoch {} with macro average F1: {}, F1 score: {}'.format(epoch_i, val_f1, val_f1_1))
 
             # Process of saving the model
-            # if val_f1 > best_f1:
+            if val_f1 > best_f1:
 
-            #     base_path = "/mnt/nas2/results/Results/systematicReview/distant_pico/FS/" + str(exp_args.entity) + "/" + str(exp_args.model)
-            #     if not os.path.exists( base_path ):
-            #         oldmask = os.umask(000)
-            #         os.makedirs(base_path)
-            #         os.umask(oldmask)
+                base_path = "/mnt/nas2/results/Models/systematicReview/Distant_CTO/models/" + str(exp_args.entity) + "/" + str(exp_args.model)
+                if not os.path.exists( base_path ):
+                    oldmask = os.umask(000)
+                    os.makedirs(base_path)
+                    os.umask(oldmask)
 
-            #     print("Best validation F1 improved from {} to {} ...".format( best_f1, val_f1 ))
-            #     model_name_here = base_path + '/' +str(eachSeed) + '_' + str(epoch_i) + '.pth'
-            #     print('Saving the best model for epoch {} with mean F1 score of {} '.format(epoch_i, val_f1 )) 
-            #     torch.save(defModel.state_dict(), model_name_here)
-            #     best_f1 = val_f1
-            #     saved_models.append(model_name_here)
+                print("Best validation F1 improved from {} to {} ...".format( best_f1, val_f1 ))
+                model_name_here = base_path + '/' +str(eachSeed) + '_' + str(exp_args.annot) + '_' + str(exp_args.embed) + '_epoch_' + str(epoch_i) + '.pth'
+                print('Saving the best model for epoch {} with mean F1 score of {} '.format(epoch_i, val_f1 )) 
+                torch.save(defModel.state_dict(), model_name_here)
+                best_f1 = val_f1
+                saved_models.append(model_name_here)
 
     return saved_models
