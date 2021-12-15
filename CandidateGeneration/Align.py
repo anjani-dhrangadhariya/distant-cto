@@ -116,10 +116,8 @@ def align_highconf_target(target, source):
         s = difflib.SequenceMatcher(None, target_term, source, autojunk=True)
         matches = fullMatchScore(s, source, target_term)
         for match in matches:
-            if match[0] >= 1.0:               
+            if match[0] >= 0.9:               
                 extracted_annot = extract( source, target_term, target, match )
-
-                # print( extracted_annot )
 
     if extracted_annot:
         return target['tokens'], extracted_annot['annotation']
