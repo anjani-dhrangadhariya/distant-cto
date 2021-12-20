@@ -2,10 +2,6 @@
 '''
 This module contains text preprocessing functions used to preprocess and normalize text (Source and Target) before they could be aligned or matched.
 '''
-__author__ = "Anjani Dhrangadhariya"
-__maintainer__ = "Anjani Dhrangadhariya"
-__email__ = "anjani.k.dhrangadhariya@gmail.com"
-__status__ = "Prototype/Research"
 
 ################################################################################
 # Library imports
@@ -24,6 +20,9 @@ stop_words = set(stopwords.words('english'))
 nlp = spacy.load("en_core_sci_sm")
 nlp.add_pipe("sentencizer")
 nlp.add_pipe("abbreviation_detector")
+stopwords = nlp.Defaults.stop_words
+additional_stopwords = ['of']
+stopwords.update(additional_stopwords)
 
 ################################################################################
 # Preprocessing functions
@@ -118,14 +117,12 @@ def removeSpaceTrailsString(s):
     return " ".join(s.split())
 
 def removePunct(s):
-    return s.translate(str.maketrans('', '', string.punctuation))
+    return s.translate(str.maketrans(' ', ' ', string.punctuation))
 
 
 def clean_unicide(s):
     s_encode = s.encode("ascii", "ignore")
     return s_encode.decode()
-
-# Normalize symbols like + (plus)
 
 def preprocess_targets(target_nomen, s):
 
@@ -192,6 +189,10 @@ def ngrams(s):
 
 def getBigrams(intervention_term):
 
+    # Preprocess intervention terms for removal of stopwords
+    intervention_term = [ t for t in intervention_term.split() if t not in stopwords ]
+    intervention_term = ' '.join( intervention_term )
+
     bigram_dict = dict()
     bigrams = []
     
@@ -199,18 +200,14 @@ def getBigrams(intervention_term):
 
     if detected_abb:
         for i, abb in enumerate(detected_abb):
-            if len(abb.split(' ')) >= 3:
-                # remove punctuation
+            if len(abb.split(' ')) >= 3: # If there are actually more words than 2
                 punct_stripped = removePunct(abb)
-                #punct_stripped = abb
                 modified_term = removeSpaceTrailsString(punct_stripped)
-                bigrams.extend( ngrams(modified_term) ) 
+                bigrams.extend( ngrams(modified_term) )
 
     else:
         punct_stripped = removePunct(intervention_term)
-        #punct_stripped = intervention_term
         modified_term = removeSpaceTrailsString(punct_stripped)
-        bigrams_i = ngrams(modified_term)
         bigrams.extend( ngrams(modified_term) ) 
 
     if bigrams:
