@@ -2,10 +2,6 @@
 '''
 Main python file
 '''
-__author__ = "Anjani Dhrangadhariya"
-__maintainer__ = "Anjani Dhrangadhariya"
-__email__ = "anjani.k.dhrangadhariya@gmail.com"
-__status__ = "Prototype/Research"
 
 import collections
 import datetime as dt
@@ -46,13 +42,6 @@ LOG_FILE = os.getcwd() + "/logs"
 if not os.path.exists(LOG_FILE):
     os.makedirs(LOG_FILE)
 
-# LOG_FILE = LOG_FILE + "/" + dt.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d %H_%M_%S') + ".log"
-# logFormatter = logging.Formatter("%(levelname)s %(asctime)s %(processName)s %(message)s")
-# fileHandler = logging.FileHandler("{0}".format(LOG_FILE))
-# rootLogger = logging.getLogger()
-# rootLogger.addHandler(fileHandler)
-# rootLogger.setLevel(logging.INFO)
-
 negative_sents = True
 MIN_TARGET_LENGTH = 5
 
@@ -78,14 +67,13 @@ results_gen = helpers.scan(
 
 match_scores = []
 
-res = es.search(index="ctofull-index", body={"query": {"match_all": {}}}, size=10)
-print('Total number of records retrieved: ', res['hits']['total']['value'])
+#res = es.search(index="ctofull-index", body={"query": {"match_all": {}}}, size=10)
+#print('Total number of records retrieved: ', res['hits']['total']['value'])
 
+with open(f'{outdir}/distantcto_high_conf_09_20dec2021.txt', 'a+') as all_wf:
 
-with open(f'{outdir}/distantcto_high_conf.txt', 'a+') as all_wf:
-
-    # for hit in results_gen: # XXX: Entire CTO
-    for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search results from the CTO
+    for hit in results_gen: # XXX: Entire CTO
+    #for n, hit in enumerate( res['hits']['hits'] ): # XXX: Only a part search results from the CTO
 
         try:
 
@@ -150,7 +138,7 @@ with open(f'{outdir}/distantcto_high_conf.txt', 'a+') as all_wf:
             # Source 2: Arms Group Labels will be considered as Intervention names as well
             armGroup = getArmsGroups(protocol_section)
 
-            # Combined sources
+            # Combine the three above-retrieved sources of intervention into a single source
             interventionSource.extend( interventions ); interventionSource.extend( interventionSyn ); interventionSource.extend( armGroup )
             interventionSource = list( set(interventionSource) ) # removes any duplicate entries
 
@@ -217,7 +205,7 @@ with open(f'{outdir}/distantcto_high_conf.txt', 'a+') as all_wf:
                             aggregated_annotations = mergeAnnotations(aggregated_annotations, key_t, value_t, annot_type, np_ds_annot)
 
 
-            # LF4: Fuzzy Bigram labeler
+            # LF4: Fuzzy Bigram labeler TODO: Convert funnzy bigram matcher to fuzzy 8-gram matcher
             for key_s, value_s in combined_bgm_sources.items():
                 
                 source_term = value_s['text'].lower()
@@ -227,7 +215,6 @@ with open(f'{outdir}/distantcto_high_conf.txt', 'a+') as all_wf:
                     
                     target_term = value_t['text'].lower()
 
-                    # LF3 Match Noun Chunks using Distant supervision 
                     bgm_ds_token, bgm_ds_annot = align_highconf_target(value_t, source_term)
 
                     if bgm_ds_annot:
