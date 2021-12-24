@@ -33,7 +33,6 @@ import torch.nn.functional as F
 import torch.optim as optim
 # keras essentials
 from keras.preprocessing.sequence import pad_sequences
-from memory_profiler import profile
 # numpy essentials
 from numpy import asarray
 from torch import LongTensor
@@ -46,7 +45,7 @@ from transformers import (AdamW, AutoTokenizer, BertConfig, BertModel,
                           RobertaConfig, RobertaModel,
                           get_linear_schedule_with_warmup)
 
-from VectorBuilders.contextual_vector_builder import *
+
 
 def tokenize_and_preserve_labels(sentence, text_labels, pos, tokenizer):
     dummy_label = 100 # Could be any kind of labels that you can mask
@@ -174,12 +173,12 @@ def transform(sentence, text_labels, pos, tokenizer, max_length, pretrained_mode
 
     return input_ids.squeeze(), input_labels.squeeze(), attention_masks.squeeze(), input_pos.squeeze()
 
-def getContextualVectors( annotations_df, tokenizer, pretrained_model, MAX_LEN, pos_encoder = None ):
+def getContextualVectors( annotations_df, tokenizer, pretrained_model, MAX_LEN, pos_encoder):
 
     # Tokenize and preserve labels
     tokenized = []
     for tokens, labels, pos, nctid in zip(list(annotations_df['tokens']), list(annotations_df['labels']), list(annotations_df['pos']), list(annotations_df['ids'])) :
-        temp = transform(tokens, labels, pos, tokenizer, MAX_LEN, pretrained_model)
+        temp = transform(tokens, labels, pos_encoder.transform(pos), tokenizer, MAX_LEN, pretrained_model)
         tokenized.append( temp )
 
     tokens, labels, masks, poss = list(zip(*tokenized))
