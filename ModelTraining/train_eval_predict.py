@@ -238,8 +238,8 @@ def train(defModel, optimizer, scheduler, train_dataloader, development_dataload
             train_cr = classification_report(y_pred= train_epoch_logits_coarse_i, y_true=train_epochs_labels_coarse_i, labels= list(range(exp_args.num_labels)), output_dict=True)             
 
             # Delete the collected logits and labels
-            del train_epoch_logits_coarse_i, train_epochs_labels_coarse_i
-            gc.collect()
+            #del train_epoch_logits_coarse_i, train_epochs_labels_coarse_i
+            #gc.collect()
 
             val_cr, all_pred_flat_coarse, all_GT_flat_coarse, cm, all_tokens_flat, class_rep_temp  = evaluate(defModel, optimizer, scheduler, development_dataloader, exp_args, epoch_i)
             if exp_args.num_labels == 5:  
