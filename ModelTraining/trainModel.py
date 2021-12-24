@@ -52,8 +52,8 @@ def loadModel(model, exp_args):
 if __name__ == "__main__":
 
 
-    # for eachSeed in [ 0, 1, 42 ]:
-    for eachSeed in [ 0 ]:
+    for eachSeed in [ 0, 1, 42 ]:
+    # for eachSeed in [ 0 ]:
 
         with mlflow.start_run() as run:
 
@@ -72,18 +72,18 @@ if __name__ == "__main__":
             # This is executed after the seed is set because it is imperative to have reproducible data run after shuffle
             weak_candidates, ebm_nlp_df,  ebm_gold_df, hilfiker_df, exp_args, current_tokenizer, current_modelembed = fetchAndTransformCandidates()
 
-            if exp_args.train_data == 'distant-cto': 
-                fulldf = weak_candidates
-            if exp_args.train_data == 'ebm-pico': 
-                fulldf = ebm_nlp_df
-            if exp_args.train_data == 'combined': 
-                fulldf = weak_candidates.append(ebm_nlp_df, ignore_index=True)
+            # divided ebm_nlp_df into train and validation set. Validation set will always be used for validating any experiment
+            ebm_nlp_df_train, ebm_nlp_df_dev = train_test_split(ebm_nlp_df, test_size=0.2) 
 
-            # shuffle the dataset and divide into training and validation sets
-            fulldf = fulldf.sample(frac=1).reset_index(drop=True)
-            annotations, annotations_devdf_ = train_test_split(fulldf, test_size=0.2) 
+            if exp_args.train_data == 'distant-cto': 
+                annotations = weak_candidates
+            if exp_args.train_data == 'ebm-pico': 
+                annotations = ebm_nlp_df_train
+            if exp_args.train_data == 'combined': 
+                annotations = weak_candidates.append(ebm_nlp_df_train, ignore_index=True)
+
             print('Size of training set: ', len(annotations.index))
-            print('Size of development set: ', len(annotations_devdf_.index))
+            print('Size of development set: ', len(ebm_nlp_df_dev.index))
 
 
             # Log the parameters
@@ -94,15 +94,13 @@ if __name__ == "__main__":
             train_input_labels = convertDf2Tensor(annotations['label_pads'])
             train_attn_masks = convertDf2Tensor(annotations['attn_masks'])
             train_pos_tags = convertDf2Tensor(annotations['inputpos'])
-            # train_pos_tags = torch.nn.functional.one_hot( torch.from_numpy( np.array( list(annotations['inputpos']), dtype=np.int64) ).clone().detach() )
             assert train_input_ids.dtype == train_input_labels.dtype == train_attn_masks.dtype == train_pos_tags.dtype
 
             # Test set (EBM-NLP training data used as test set)
-            dev_input_ids = convertDf2Tensor( annotations_devdf_['embeddings'])
-            dev_input_labels = convertDf2Tensor( annotations_devdf_['label_pads'])
-            dev_attn_masks = convertDf2Tensor( annotations_devdf_['attn_masks'])
-            dev_pos_tags = convertDf2Tensor( annotations_devdf_['attn_masks'])
-            # test_pos_tags = torch.nn.functional.one_hot( torch.from_numpy( np.array( list(annotations_testdf_['inputpos'])
+            dev_input_ids = convertDf2Tensor( ebm_nlp_df_dev['embeddings'])
+            dev_input_labels = convertDf2Tensor( ebm_nlp_df_dev['label_pads'])
+            dev_attn_masks = convertDf2Tensor( ebm_nlp_df_dev['attn_masks'])
+            dev_pos_tags = convertDf2Tensor( ebm_nlp_df_dev['attn_masks'])
             assert dev_input_ids.dtype == dev_input_labels.dtype == dev_attn_masks.dtype == dev_pos_tags.dtype
 
             # Test set 1 (EBM-NLP test gold data test set)
@@ -125,10 +123,16 @@ if __name__ == "__main__":
             train_sampler = RandomSampler(train_data)
             train_dataloader = DataLoader(train_data, sampler=None, batch_size=10, shuffle=False)
 
+            del train_input_ids, train_input_labels, train_attn_masks, train_pos_tags, train_sampler
+            gc.collect()
+
             # Create the DataLoader for our test set. (This will be used as validation set!)
             dev_data = TensorDataset(dev_input_ids, dev_input_labels, dev_attn_masks, dev_pos_tags)
             dev_sampler = RandomSampler(dev_data)
             dev_dataloader = DataLoader(dev_data, sampler=None, batch_size=10, shuffle=False)
+
+            del dev_input_ids, dev_input_labels, dev_attn_masks, dev_pos_tags, dev_sampler
+            gc.collect()
 
             # Create the DataLoader for our test set 1.
             test1_data = TensorDataset(test1_input_ids, test1_input_labels, test1_attn_masks, test1_pos_tags)
