@@ -163,7 +163,7 @@ def evaluate(defModel, optimizer, scheduler, development_dataloader, exp_args, e
         val_cr = classification_report(y_pred= all_pred_flat, y_true=all_GT_flat, labels=list(range(exp_args.num_labels)), output_dict=True)
 
         # confusion_matrix and plot
-        labels = [0, 1, 2, 3, 4]
+        labels = [0, 1]
         cm = confusion_matrix(all_GT_flat, all_pred_flat, labels, normalize=None)
 
     return val_cr, all_pred_flat, all_GT_flat, cm, all_tokens_flat, class_rep_temp        
@@ -270,7 +270,7 @@ def train(defModel, optimizer, scheduler, train_dataloader, development_dataload
                     os.umask(oldmask)
 
                 print("Best validation F1 improved from {} to {} ...".format( best_f1, val_f1 ))
-                model_name_here = base_path + '/' +str(eachSeed) + '_' + str(exp_args.annot) + '_' + str(exp_args.embed) + '_epoch_' + str(epoch_i) + '.pth'
+                model_name_here = base_path + '/' +str(eachSeed) + '_' + str(exp_args.annot) + '2_' + str(exp_args.embed) + '_epoch_' + str(epoch_i) + '.pth'
                 print('Saving the best model for epoch {} with mean F1 score of {} '.format(epoch_i, val_f1 )) 
                 torch.save(defModel.state_dict(), model_name_here)
                 best_f1 = val_f1
